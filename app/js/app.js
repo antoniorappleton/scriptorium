@@ -73,7 +73,14 @@ async function carregarOcorrencias(q = "") {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  if (window.supabaseReady) {
+    try {
+      await window.supabaseReady;
+    } catch (e) {
+      console.error("Supabase initialization failed", e);
+    }
+  }
   const form = document.getElementById("ocorrenciaForm");
   const syncBtn = document.getElementById("syncBtn");
   const search = document.getElementById("search");
