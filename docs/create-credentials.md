@@ -4,6 +4,7 @@ Vou descrever passos para criar os dois utilizadores que pediste:
 
 - `scriptorium@colegio.ramalhao.com` (usar apenas para login)
 - `admin@colegio.ramalhao.com` (administrador: pode adicionar alunos/turmas/anos)
+-- `antonio.appleton@colegio-ramalhao.com` (administrador: pode adicionar alunos/turmas/anos)
 
 IMPORTANTE: Para criar utilizadores no Supabase é necessário usar a Dashboard (GUI) ou a API com a `service_role` key. Nunca comites a `service_role` para o repositório.
 
@@ -13,6 +14,7 @@ Opções:
 - Abre https://app.supabase.com → seleciona o teu projeto
 - Vai a `Authentication → Users` → `Invite user` ou `Add user` (dependendo da UI)
 - Usa o email `scriptorium@colegio.ramalhao.com` e `admin@colegio.ramalhao.com`.
+ - Usa o email `scriptorium@colegio.ramalhao.com` e `antonio.appleton@colegio-ramalhao.com`.
 - Para o administrador: depois de criar o user, adiciona um registo na tabela `professores` com o email e a role `admin` (ver SQL abaixo).
 
 2) Criar utilizadores via API (programático)
@@ -34,6 +36,7 @@ curl -X POST "$PROJECT_URL/auth/v1/admin/users" \
   -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@colegio.ramalhao.com","email_confirm":true}'
+   -d '{"email":"antonio.appleton@colegio-ramalhao.com","email_confirm":true}'
 ```
 
 Depois, para associar o `admin` à tabela de `professores` (ou criar um registo administrador), usa a SQL abaixo na consola SQL do Supabase:
@@ -41,7 +44,7 @@ Depois, para associar o `admin` à tabela de `professores` (ou criar um registo 
 ```sql
 -- Ajusta os nomes de colunas à tua schema
 INSERT INTO professores (nome, email, role, criado_em)
-VALUES ('Administrador Scriptorium', 'admin@colegio.ramalhao.com', 'admin', now());
+VALUES ('Administrador Scriptorium', 'antonio.appleton@colegio-ramalhao.com', 'admin', now());
 
 -- Registo para o utilizador de serviço/front-end (opcional)
 INSERT INTO professores (nome, email, role, criado_em)
