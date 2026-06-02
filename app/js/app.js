@@ -84,33 +84,48 @@ document.addEventListener("DOMContentLoaded", async () => {
   const form = document.getElementById("ocorrenciaForm");
   const syncBtn = document.getElementById("syncBtn");
   const search = document.getElementById("search");
+  const ocorrenciasListEl = document.getElementById("ocorrenciasList");
 
-  document.getElementById("data").value = new Date().toISOString().slice(0, 10);
+  // If form exists (on registar page), wire submit handling and default date
+  if (form) {
+    const dataInput = document.getElementById("data");
+    if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
 
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const dados = {
-      aluno_nome: document.getElementById("alunoNome").value,
-      ano: Number(document.getElementById("ano").value),
-      turma: document.getElementById("turma").value,
-      data: document.getElementById("data").value,
-      motivo: document.getElementById("motivo").value,
-      created_at: new Date().toISOString(),
-    };
-    registarOcorrencia(dados);
-    form.reset();
-    document.getElementById("data").value = new Date()
-      .toISOString()
-      .slice(0, 10);
-  });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const alunoNomeEl = document.getElementById("alunoNome");
+      const anoEl = document.getElementById("ano");
+      const turmaEl = document.getElementById("turma");
+      const motivoEl = document.getElementById("motivo");
+      const dataEl = document.getElementById("data");
 
-  syncBtn.addEventListener("click", () => sincronizarPendentes());
+      const dados = {
+        aluno_nome: alunoNomeEl ? alunoNomeEl.value : "",
+        ano: anoEl ? Number(anoEl.value) : null,
+        turma: turmaEl ? turmaEl.value : null,
+        data: dataEl ? dataEl.value : new Date().toISOString().slice(0, 10),
+        motivo: motivoEl ? motivoEl.value : "",
+        created_at: new Date().toISOString(),
+      };
 
-  let debounce;
-  search.addEventListener("input", () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => carregarOcorrencias(search.value.trim()), 300);
-  });
+      registarOcorrencia(dados);
+      form.reset();
+      if (dataEl) dataEl.value = new Date().toISOString().slice(0, 10);
+    });
+  }
 
-  carregarOcorrencias();
+  if (syncBtn) syncBtn.addEventListener("click", () => sincronizarPendentes());
+
+  if (search) {
+    let debounce;
+    search.addEventListener("input", () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        if (ocorrenciasListEl) carregarOcorrencias(search.value.trim());
+      }, 300);
+    });
+  }
+
+  // Load occurrences only if the list container exists
+  if (ocorrenciasListEl) carregarOcorrencias();
 });
