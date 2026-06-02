@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Registar Ocorrência — Scriptorium</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/app/css/styles.css" />
+  </head>
+  <body class="pt-20">
+    <main class="max-w-3xl mx-auto">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Registar Ocorrência</h2>
+        <form id="ocorrenciaForm" class="space-y-3">
+          <div>
+            <label class="block text-sm">Nome do aluno</label>
+            <input
+              type="text"
+              id="alunoNome"
+              required
+              class="mt-1 block w-full rounded-md border-gray-200"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm">Ano</label>
+              <input
+                type="number"
+                id="ano"
+                min="1"
+                max="12"
+                required
+                class="mt-1 block w-full rounded-md border-gray-200"
+              />
+            </div>
+            <div>
+              <label class="block text-sm">Turma</label>
+              <input
+                type="text"
+                id="turma"
+                required
+                class="mt-1 block w-full rounded-md border-gray-200"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm">Data</label>
+            <input
+              type="date"
+              id="data"
+              class="mt-1 block w-full rounded-md border-gray-200"
+            />
+          </div>
+          <div>
+            <label class="block text-sm">Motivo</label>
+            <textarea
+              id="motivo"
+              required
+              class="mt-1 block w-full rounded-md border-gray-200"
+            ></textarea>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md"
+            >
+              Registar
+            </button>
+            <a href="/app/index.html" class="px-3 py-2">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <script src="/app/js/supabase.js"></script>
+    <script>
+      (async () => {
+        if (window.supabaseReady) await window.supabaseReady;
+        try {
+          const { data } = await window.supabase.auth.getSession();
+          if (!data?.session) {
+            window.location.href = "/app/login.html";
+          }
+        } catch (e) {
+          console.error("Auth check failed", e);
+          window.location.href = "/app/login.html";
+        }
+      })();
+    </script>
+    <script src="/app/js/app.js"></script>
+  </body>
+</html>

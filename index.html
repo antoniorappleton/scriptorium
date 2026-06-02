@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Academic Portal — Scriptorium</title>
+    <meta
+      name="description"
+      content="Portal Académico — registo de ocorrências"
+    />
+    <link rel="manifest" href="/app/manifest.json" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/app/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  </head>
+  <body>
+    <header
+      class="bg-primary flex justify-between items-center px-5 md:px-8 w-full fixed top-0 z-50 h-16 border-b border-gray-200"
+    >
+      <div class="flex items-center gap-3">
+        <img
+          src="/app/assets/logo.png"
+          alt="logo"
+          class="h-10 w-10 object-contain"
+        />
+        <h1 class="text-lg font-semibold">SCRIPTORIUM</h1>
+      </div>
+      <nav class="hidden md:flex gap-6 items-center">
+        <a class="text-sm text-gray-700 hover:underline" href="#">Dashboard</a>
+        <a class="text-sm text-gray-700 hover:underline" href="#">Registos</a>
+        <a class="text-sm text-gray-700 hover:underline" href="/app/login.html"
+          >Entrar</a
+        >
+      </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto pt-20">
+      <section
+        class="relative w-full h-[40vh] md:h-[50vh] overflow-hidden mb-8"
+      >
+        <img
+          alt="Academic Campus"
+          class="w-full h-full object-cover"
+          src="/app/assets/Scriptorium.jpg"
+        />
+        <div
+          class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6"
+        >
+          <div class="text-white">
+            <h2 class="text-3xl font-bold">Bem-vindo ao</h2>
+            <p class="mt-2 max-w-2xl">
+              A sua plataforma para registo de ocorrências e gestão académica.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 md:px-0">
+        <div class="md:col-span-2 bg-white rounded-lg shadow p-6">
+          <h3 class="text-xl font-semibold mb-4">Visão Geral</h3>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="p-4 bg-surface-container-low rounded-lg">
+              <div class="text-sm text-on-surface-variant">Hoje</div>
+              <div class="text-2xl font-bold" id="metric-today">--</div>
+            </div>
+            <div class="p-4 bg-surface-container-low rounded-lg">
+              <div class="text-sm text-on-surface-variant">Este mês</div>
+              <div class="text-2xl font-bold" id="metric-month">--</div>
+            </div>
+            <div class="p-4 bg-surface-container-low rounded-lg">
+              <div class="text-sm text-on-surface-variant">Este ano</div>
+              <div class="text-2xl font-bold" id="metric-year">--</div>
+            </div>
+            <div class="p-4 bg-surface-container-low rounded-lg">
+              <div class="text-sm text-on-surface-variant">Alunos únicos</div>
+              <div class="text-2xl font-bold" id="metric-students">--</div>
+            </div>
+          </div>
+          <div class="mb-6">
+            <a
+              href="/app/registar.html"
+              class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md"
+              >➕ Registar Ocorrência</a
+            >
+          </div>
+          <div class="p-4 bg-surface-container-low rounded-lg">
+            <!-- placeholder for charts -->
+            <div class="text-sm text-on-surface-variant mb-2">
+              Ocorrências (últimos 7 dias)
+            </div>
+            <div
+              class="h-40 bg-white rounded border border-gray-100 flex items-center justify-center"
+            >
+              Gráfico placeholder
+            </div>
+          </div>
+        </div>
+
+        <aside class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold mb-3">Ocorrências Recentes</h3>
+          <input
+            id="search"
+            placeholder="Pesquisar por aluno..."
+            class="w-full rounded-md border-gray-200 mb-3 p-2"
+          />
+          <div id="ocorrenciasList" class="space-y-2">Carregando…</div>
+          <!-- Admin panel: visível apenas para utilizadores com role=admin -->
+          <div id="adminPanel" class="mt-6 hidden">
+            <h4 class="text-md font-semibold mb-2">Área Administrativa</h4>
+            <form id="addAlunoForm" class="space-y-2 mb-3">
+              <div class="grid grid-cols-3 gap-2">
+                <input
+                  placeholder="Nome do aluno"
+                  id="alunoNomeAdmin"
+                  class="rounded-md border-gray-200 p-2 col-span-2"
+                />
+                <input
+                  placeholder="Ano"
+                  id="alunoAnoAdmin"
+                  class="rounded-md border-gray-200 p-2"
+                />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <input
+                  placeholder="Turma"
+                  id="alunoTurmaAdmin"
+                  class="rounded-md border-gray-200 p-2"
+                />
+                <input
+                  placeholder="Ciclo"
+                  id="alunoCicloAdmin"
+                  class="rounded-md border-gray-200 p-2"
+                />
+                <button
+                  type="submit"
+                  class="bg-green-600 text-white px-3 py-2 rounded-md"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </form>
+            <div>
+              <h5 class="text-sm font-medium mb-2">Alunos existentes</h5>
+              <div id="alunosList" class="max-h-40 overflow-auto text-sm"></div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/app/js/supabase.js"></script>
+    <script>
+      (async () => {
+        if (window.supabaseReady) await window.supabaseReady;
+        try {
+          const { data } = await window.supabase.auth.getSession();
+          if (!data?.session) {
+            window.location.href = "/app/login.html";
+          }
+        } catch (e) {
+          console.error("Auth check failed", e);
+          // fallback: go to login
+          window.location.href = "/app/login.html";
+        }
+      })();
+    </script>
+    <script src="/app/js/app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/app/service-worker.js")
+          .then((reg) => {
+            // If there's an updated worker already waiting, reload to load it
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: "SKIP_WAITING" });
+            }
+
+            reg.addEventListener("updatefound", () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  // New content available, notify and reload
+                  newWorker.postMessage({ type: "SKIP_WAITING" });
+                }
+              });
+            });
+
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              if (refreshing) return;
+              refreshing = true;
+              window.location.reload();
+            });
+          })
+          .catch(console.error);
+      }
+    </script>
+  </body>
+</html>

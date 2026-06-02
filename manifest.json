@@ -1,0 +1,20 @@
+{
+  "name": "Scriptorium",
+  "short_name": "Scriptorium",
+  "start_url": "/app/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#464feb",
+  "icons": [
+    {
+      "src": "/app/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/app/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
