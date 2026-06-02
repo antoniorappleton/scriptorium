@@ -3,52 +3,144 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Scriptorium — Registo de Ocorrências</title>
+    <title>Academic Portal — Scriptorium</title>
+    <meta
+      name="description"
+      content="Portal Académico — registo de ocorrências"
+    />
     <link rel="manifest" href="/app/manifest.json" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/app/css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   </head>
   <body>
-    <header>
-      <div class="brand">
-        <img src="/app/assets/logo.svg" alt="Scriptorium" id="logo" />
-        <div class="brand-text">
-          <h1>Scriptorium</h1>
-          <div class="tag">Registo de Ocorrências</div>
-        </div>
+    <header
+      class="bg-primary flex justify-between items-center px-5 md:px-8 w-full fixed top-0 z-50 h-16 border-b border-gray-200"
+    >
+      <div class="flex items-center gap-3">
+        <img
+          src="/app/assets/logo.png"
+          alt="logo"
+          class="h-10 w-10 object-contain"
+        />
+        <h1 class="text-lg font-semibold">ACADEMIC PORTAL</h1>
       </div>
-      <nav>
-        <a class="btn-ghost" href="/app/login.html">Entrar</a>
+      <nav class="hidden md:flex gap-6 items-center">
+        <a class="text-sm text-gray-700 hover:underline" href="#">Dashboard</a>
+        <a class="text-sm text-gray-700 hover:underline" href="#">Registos</a>
+        <a class="text-sm text-gray-700 hover:underline" href="/app/login.html"
+          >Entrar</a
+        >
       </nav>
     </header>
 
-    <main>
-      <section id="formSection">
-        <h2>Nova Ocorrência</h2>
-        <form id="ocorrenciaForm">
-          <label
-            >Nome do aluno<input type="text" id="alunoNome" required
-          /></label>
-          <label
-            >Ano<input type="number" id="ano" min="1" max="12" required
-          /></label>
-          <label>Turma<input type="text" id="turma" required /></label>
-          <label>Data<input type="date" id="data" /></label>
-          <label>Motivo<textarea id="motivo" required></textarea></label>
-          <button type="submit">Registar</button>
-        </form>
-        <button id="syncBtn">Sincronizar pendentes</button>
+    <main class="max-w-7xl mx-auto pt-20">
+      <section
+        class="relative w-full h-[40vh] md:h-[50vh] overflow-hidden mb-8"
+      >
+        <img
+          alt="Academic Campus"
+          class="w-full h-full object-cover"
+          src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=placeholder"
+        />
+        <div
+          class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6"
+        >
+          <div class="text-white">
+            <h2 class="text-3xl font-bold">Bem-vindo ao Portal Académico</h2>
+            <p class="mt-2 max-w-2xl">
+              A sua plataforma para registo de ocorrências e gestão académica.
+            </p>
+          </div>
+        </div>
       </section>
 
-      <section id="listaSection">
-        <h2>Ocorrências</h2>
-        <input id="search" placeholder="Pesquisar por aluno..." />
-        <div id="ocorrenciasList">Carregando…</div>
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 md:px-0">
+        <div class="md:col-span-2 bg-white rounded-lg shadow p-6">
+          <h3 class="text-xl font-semibold mb-4">Registar Ocorrência</h3>
+          <form id="ocorrenciaForm" class="space-y-3">
+            <div>
+              <label class="block text-sm">Nome do aluno</label>
+              <input
+                type="text"
+                id="alunoNome"
+                required
+                class="mt-1 block w-full rounded-md border-gray-200"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm">Ano</label>
+                <input
+                  type="number"
+                  id="ano"
+                  min="1"
+                  max="12"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-200"
+                />
+              </div>
+              <div>
+                <label class="block text-sm">Turma</label>
+                <input
+                  type="text"
+                  id="turma"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-200"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm">Data</label>
+              <input
+                type="date"
+                id="data"
+                class="mt-1 block w-full rounded-md border-gray-200"
+              />
+            </div>
+            <div>
+              <label class="block text-sm">Motivo</label>
+              <textarea
+                id="motivo"
+                required
+                class="mt-1 block w-full rounded-md border-gray-200"
+              ></textarea>
+            </div>
+            <div class="flex items-center gap-3">
+              <button
+                type="submit"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md"
+              >
+                Registar
+              </button>
+              <button
+                type="button"
+                id="syncBtn"
+                class="px-3 py-2 border rounded-md"
+              >
+                Sincronizar pendentes
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <aside class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold mb-3">Ocorrências Recentes</h3>
+          <input
+            id="search"
+            placeholder="Pesquisar por aluno..."
+            class="w-full rounded-md border-gray-200 mb-3 p-2"
+          />
+          <div id="ocorrenciasList" class="space-y-2">Carregando…</div>
+        </aside>
       </section>
     </main>
 
