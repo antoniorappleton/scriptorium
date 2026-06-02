@@ -39,11 +39,6 @@ CREATE POLICY public_select_ocorrencias
 DROP POLICY IF EXISTS authenticated_insert_ocorrencias ON public.ocorrencias;
 CREATE POLICY authenticated_insert_ocorrencias
   ON public.ocorrencias FOR INSERT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.professores p WHERE p.email = public.current_user_email()
-    )
-  )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.professores p WHERE p.email = public.current_user_email()
