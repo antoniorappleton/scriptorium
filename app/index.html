@@ -31,7 +31,7 @@
           alt="logo"
           class="h-10 w-10 object-contain"
         />
-        <h1 class="text-lg font-semibold">ACADEMIC PORTAL</h1>
+        <h1 class="text-lg font-semibold">SCRIPTORIUM</h1>
       </div>
       <nav class="hidden md:flex gap-6 items-center">
         <a class="text-sm text-gray-700 hover:underline" href="#">Dashboard</a>
@@ -150,6 +150,32 @@
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker
           .register("/app/service-worker.js")
+          .then((reg) => {
+            // If there's an updated worker already waiting, reload to load it
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: "SKIP_WAITING" });
+            }
+
+            reg.addEventListener("updatefound", () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  // New content available, notify and reload
+                  newWorker.postMessage({ type: "SKIP_WAITING" });
+                }
+              });
+            });
+
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              if (refreshing) return;
+              refreshing = true;
+              window.location.reload();
+            });
+          })
           .catch(console.error);
       }
     </script>
