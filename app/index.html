@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Scriptorium — Registo de Ocorrências</title>
+    <link rel="manifest" href="/app/manifest.json" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/app/css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <img src="/app/assets/logo.svg" alt="Scriptorium" id="logo" />
+        <div class="brand-text">
+          <h1>Scriptorium</h1>
+          <div class="tag">Registo de Ocorrências</div>
+        </div>
+      </div>
+      <nav>
+        <a class="btn-ghost" href="/app/login.html">Entrar</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="formSection">
+        <h2>Nova Ocorrência</h2>
+        <form id="ocorrenciaForm">
+          <label
+            >Nome do aluno<input type="text" id="alunoNome" required
+          /></label>
+          <label
+            >Ano<input type="number" id="ano" min="1" max="12" required
+          /></label>
+          <label>Turma<input type="text" id="turma" required /></label>
+          <label>Data<input type="date" id="data" /></label>
+          <label>Motivo<textarea id="motivo" required></textarea></label>
+          <button type="submit">Registar</button>
+        </form>
+        <button id="syncBtn">Sincronizar pendentes</button>
+      </section>
+
+      <section id="listaSection">
+        <h2>Ocorrências</h2>
+        <input id="search" placeholder="Pesquisar por aluno..." />
+        <div id="ocorrenciasList">Carregando…</div>
+      </section>
+    </main>
+
+    <script src="/app/js/supabase.js"></script>
+    <script src="/app/js/app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/app/service-worker.js")
+          .catch(console.error);
+      }
+    </script>
+  </body>
+</html>
