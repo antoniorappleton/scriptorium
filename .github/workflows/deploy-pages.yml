@@ -1,8 +1,13 @@
 name: Deploy /app to GitHub Pages (gh-pages branch)
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
