@@ -33,6 +33,65 @@ async function sincronizarPendentes() {
   carregarOcorrencias();
 }
 
+// --- Admin helpers: check role, manage alunos
+async function isCurrentUserAdmin() {
+  try {
+    const userResp = await window.supabase.auth.getUser();
+    const user = userResp?.data?.user;
+    if (!user) return false;
+    const email = user.email;
+    const { data, error } = await window.supabase
+      .from("professores")
+      .select("role")
+      .eq("email", email)
+      .single();
+    if (error) return false;
+    return data?.role === "admin";
+  } catch (e) {
+    console.error("isCurrentUserAdmin error", e);
+    return false;
+  }
+}
+
+async function addAluno(payload) {
+  try {
+    const { error } = await window.supabase.from("alunos").insert([payload]);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error("addAluno error", e);
+    return false;
+  }
+}
+
+async function loadAlunos() {
+  const list = document.getElementById("alunosList");
+  if (!list) return;
+  list.innerHTML = "Carregando...";
+  try {
+    const { data, error } = await window.supabase
+      .from("alunos")
+      .select("*")
+      .order("nome", { ascending: true })
+      .limit(200);
+    if (error) throw error;
+    if (!data || !data.length) {
+      list.innerHTML = "<div class='text-sm text-gray-500'>Sem alunos</div>";
+      return;
+    }
+    list.innerHTML = data
+      .map(
+        (a) =>
+          `<div class="py-1">${a.nome} — ${a.ano || ""} ${a.turma || ""} ${a.ciclo ? "— " + a.ciclo : ""}</div>`,
+      )
+      .join("");
+  } catch (e) {
+    console.error(e);
+    list.innerHTML =
+      "<div class='text-sm text-red-500'>Erro a carregar alunos</div>";
+  }
+}
+
 async function carregarOcorrencias(q = "") {
   const listEl = document.getElementById("ocorrenciasList");
   listEl.innerHTML = "Carregando...";
@@ -128,4 +187,41 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Load occurrences only if the list container exists
   if (ocorrenciasListEl) carregarOcorrencias();
+
+  // Check admin and wire admin UI if present
+  const adminPanel = document.getElementById("adminPanel");
+  if (adminPanel) {
+    const isAdmin = await isCurrentUserAdmin();
+    if (isAdmin) {
+      adminPanel.classList.remove("hidden");
+      loadAlunos();
+      const addForm = document.getElementById("addAlunoForm");
+      if (addForm) {
+        addForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const nome = document.getElementById("alunoNomeAdmin")?.value?.trim();
+          const ano = document.getElementById("alunoAnoAdmin")?.value?.trim();
+          const turma = document
+            .getElementById("alunoTurmaAdmin")
+            ?.value?.trim();
+          const ciclo = document
+            .getElementById("alunoCicloAdmin")
+            ?.value?.trim();
+          if (!nome) return alert("Nome do aluno é obrigatório");
+          const ok = await addAluno({
+            nome,
+            ano: ano || null,
+            turma: turma || null,
+            ciclo: ciclo || null,
+            criado_em: new Date().toISOString(),
+          });
+          if (ok) {
+            addForm.reset();
+            loadAlunos();
+            alert("Aluno adicionado");
+          } else alert("Falha ao adicionar aluno");
+        });
+      }
+    }
+  }
 });

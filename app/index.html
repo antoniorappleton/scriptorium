@@ -112,6 +112,46 @@
             class="w-full rounded-md border-gray-200 mb-3 p-2"
           />
           <div id="ocorrenciasList" class="space-y-2">Carregando…</div>
+          <!-- Admin panel: visível apenas para utilizadores com role=admin -->
+          <div id="adminPanel" class="mt-6 hidden">
+            <h4 class="text-md font-semibold mb-2">Área Administrativa</h4>
+            <form id="addAlunoForm" class="space-y-2 mb-3">
+              <div class="grid grid-cols-3 gap-2">
+                <input
+                  placeholder="Nome do aluno"
+                  id="alunoNomeAdmin"
+                  class="rounded-md border-gray-200 p-2 col-span-2"
+                />
+                <input
+                  placeholder="Ano"
+                  id="alunoAnoAdmin"
+                  class="rounded-md border-gray-200 p-2"
+                />
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <input
+                  placeholder="Turma"
+                  id="alunoTurmaAdmin"
+                  class="rounded-md border-gray-200 p-2"
+                />
+                <input
+                  placeholder="Ciclo"
+                  id="alunoCicloAdmin"
+                  class="rounded-md border-gray-200 p-2"
+                />
+                <button
+                  type="submit"
+                  class="bg-green-600 text-white px-3 py-2 rounded-md"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </form>
+            <div>
+              <h5 class="text-sm font-medium mb-2">Alunos existentes</h5>
+              <div id="alunosList" class="max-h-40 overflow-auto text-sm"></div>
+            </div>
+          </div>
         </aside>
       </section>
     </main>
