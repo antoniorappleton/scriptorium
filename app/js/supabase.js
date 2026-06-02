@@ -1,7 +1,6 @@
 // Substitui os valores abaixo com os dados do teu projeto Supabase
-const SUPABASE_URL = "https://pllmyptwuvxryxfeufcm.supabase.co"; // <- substituir
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbG15cHR3dXZ4cnl4ZmV1ZmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzOTA0NjgsImV4cCI6MjA5NTk2NjQ2OH0.xrZoCyXTHUi1jxjEuH_ymbAGZDVR6ZtVN1lN54EWJE0"; // <- substituir
+const SUPABASE_URL = "https://pllmyptwuvxryxfeufcm.supabase.co";
+const SUPABASE_KEY ="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbG15cHR3dXZ4cnl4ZmV1ZmNtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzOTA0NjgsImV4cCI6MjA5NTk2NjQ2OH0.xrZoCyXTHUi1jxjEuH_ymbAGZDVR6ZtVN1lN54EWJE0"; // <- substituir
 
 // Ensure the supabase client is available and create a client instance.
 // Expose a promise `window.supabaseReady` that resolves when `window.supabase` (the client) is ready.
