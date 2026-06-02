@@ -117,6 +117,21 @@
     </main>
 
     <script src="/app/js/supabase.js"></script>
+    <script>
+      (async () => {
+        if (window.supabaseReady) await window.supabaseReady;
+        try {
+          const { data } = await window.supabase.auth.getSession();
+          if (!data?.session) {
+            window.location.href = "/app/login.html";
+          }
+        } catch (e) {
+          console.error("Auth check failed", e);
+          // fallback: go to login
+          window.location.href = "/app/login.html";
+        }
+      })();
+    </script>
     <script src="/app/js/app.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
