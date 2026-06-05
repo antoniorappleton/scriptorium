@@ -1,17 +1,35 @@
-const CACHE_NAME = "scriptorium-v2";
+const CACHE_NAME = "scriptorium-v3";
 const PRECACHE = [
+  "./",
   "index.html",
   "login.html",
+  "registar.html",
+  "admin.html",
   "css/styles.css",
   "js/app.js",
   "js/supabase.js",
+  "js/admin.js",
   "manifest.json",
   "assets/logo.png",
+  "assets/logo.svg",
+  "assets/Scriptorium.jpg",
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js",
+  "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js",
+  "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)),
+    caches.open(CACHE_NAME).then((cache) => {
+      // We wrap it in a try-catch or map to handle individual failures if any external URL is down
+      return Promise.allSettled(
+        PRECACHE.map((url) => {
+          return cache.add(url).catch((err) => {
+            console.warn(`Precache failed for: ${url}`, err);
+          });
+        })
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -29,7 +47,7 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Network-first for navigation requests (HTML)
+// Network-first with cache fallback for navigation requests (HTML)
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
@@ -41,14 +59,18 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          // update cache
-          const copy = res.clone();
-          caches
-            .open(CACHE_NAME)
-            .then((cache) => cache.put("index.html", copy));
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          }
           return res;
         })
-        .catch(() => caches.match("index.html")),
+        .catch(() => {
+          // Try to match the exact page request first, fallback to root/index.html
+          return caches.match(req).then((cachedResponse) => {
+            return cachedResponse || caches.match("index.html") || caches.match("./");
+          });
+        }),
     );
     return;
   }

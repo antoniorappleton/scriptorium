@@ -1,36 +1,39 @@
-Local development and Live Server
+# Local development and Live Server
 
-Run a simple static server serving the `docs/` directory so the site behaves like GitHub Pages.
+Executa um servidor estático simples para servir a pasta `app/` para que o site funcione localmente.
 
-Python (built-in):
-
-```bash
-# from repo root
-python -m http.server 5500 -d docs
-# open http://localhost:5500/
-```
-
-Node (http-server):
+### Opção 1: Python (nativo)
 
 ```bash
-npx http-server docs -p 5500
+# a partir da raiz do repositório
+python -m http.server 5500 -d app
+# abrir http://localhost:5500/
 ```
 
-VS Code Live Server:
-- Open `docs/index.html` in VS Code, right-click, `Open with Live Server`.
-- Ensure Live Server serves the `docs/` folder as the root.
+### Opção 2: Node.js (http-server)
 
-Supabase: allow localhost redirect URLs
+```bash
+# a partir da raiz do repositório
+npx http-server app -p 5500
+```
 
-In the Supabase Dashboard → Authentication → Settings add the following Allowed Redirect URLs:
+### Opção 3: VS Code Live Server
+* Abre a pasta do repositório no VS Code.
+* Clica com o botão direito no ficheiro `app/index.html` e escolhe `Open with Live Server`.
+* Certifica-te de que as URLs apontam para `http://localhost:5500/` (ou a porta atribuída).
 
-- `http://localhost:5500/`
-- `http://localhost:5500/*`
+## Supabase: permitir URLs de redirecionamento local
 
-Also add the Site URL if not set:
+No Dashboard do Supabase → Authentication → Settings, adiciona as seguintes URLs de redirecionamento permitidas (Allowed Redirect URLs):
 
-- `https://antoniorappleton.github.io/scriptorium/`
+* `http://localhost:5500/`
+* `http://localhost:5500/*`
+* `http://localhost:8080/` (caso uses outra porta)
 
-Notes
-- The `SERVICE_ROLE_KEY` must never be used in the browser — use the `anon` key in `docs/js/supabase.js`.
-- When running locally, ensure `docs/js/supabase.js` contains the `SUPABASE_URL` and the `anon` `SUPABASE_KEY`.
+Configura também a URL do Site principal (Site URL):
+
+* `https://antoniorappleton.github.io/scriptorium/`
+
+## Notas Importantes
+* Nunca coloques a chave `service_role` (privada) do Supabase no frontend.
+* Utiliza sempre a chave `anon` (pública) no ficheiro `app/js/supabase.js`.

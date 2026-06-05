@@ -1,75 +1,76 @@
 # Scriptorium — PWA de Registo de Ocorrências
 
-Scaffold inicial da PWA Scriptorium. Coloca os ficheiros em `/app`.
+Scaffold da PWA Scriptorium. Todos os ficheiros da aplicação encontram-se na pasta `/app`.
 
-Passos para usar:
+A aplicação foi desenvolvida com um design system moderno em **Vanilla CSS** que funciona de forma **100% offline**, removendo quaisquer dependências de CDNs externas de CSS (como o Tailwind).
 
-1. Criar um projeto no Supabase e configurar tabelas: `alunos`, `professores`, `ocorrencias` conforme especificação.
-2. Atualizar `app/js/supabase.js` com `SUPABASE_URL` e `SUPABASE_KEY`.
-3. Servir a pasta (ex: `npx http-server .` ou usar um servidor estático). Abrir `app/index.html`.
-4. Testar o login em `app/login.html` (Supabase Auth envia Magic Link).
+---
 
-Offline: ocorrências falham para enviar são guardadas em `localStorage` e podem ser sincronizadas com o botão "Sincronizar pendentes".
+## Funcionalidades da Aplicação
 
--- Adições recentes: UI melhorada, placeholder de logo em `/app/assets/logo.svg`, ficheiros de suporte e instruções Supabase em `docs/supabase-setup.md`.
+### 1. Registo de Ocorrências
+- Formulário intuitivo para registar incidentes e acontecimentos escolares.
+- Associação a dados chave: Nome do Aluno, Ano Escolar, Turma, Data da Ocorrência e Descrição detalhada do sucedido.
 
-## Deploy & Verificação (checks rápidos)
+### 2. Dashboard de Estatísticas (Visão Geral)
+- **Métricas em Tempo Real:** Apresentação de estatísticas rápidas que mostram a quantidade de ocorrências registadas *Hoje*, *Este Mês*, *Este Ano* e a contagem total de *Alunos Únicos* envolvidos.
+- **Gráfico SVG Dinâmico:** Gráfico semanal desenhado dinamicamente no cliente com SVG que exibe a distribuição de ocorrências nos últimos 7 dias.
+- **Pesquisa e Filtragem:** Campo de pesquisa instantâneo que permite pesquisar e filtrar o histórico de ocorrências por nome de aluno em tempo real.
 
-**Publicação no GitHub Pages**
+### 3. Progressive Web App (PWA) & Modo Offline
+- **Execução Offline:** Instalação como aplicação de desktop ou telemóvel com suporte a precache de todas as páginas, ficheiros, fontes e bibliotecas do Supabase no browser via Service Worker.
+- **Registo Local Resiliente:** Se a rede falhar ao registar uma ocorrência, os dados são guardados de forma segura no `localStorage` sob o estado de **Pendente**.
+- **Sincronização Inteligente:** Ao restabelecer a ligação, a aplicação exibe um botão interativo e pulsante **"Sincronizar Pendentes"** para submeter os registos locais para a base de dados do Supabase.
 
-- O workflow `.github/workflows/deploy-pages.yml` publica a pasta `app/` para a branch `gh-pages` automaticamente quando fizeres push para `main`.
-- Para disparar um deploy: commit e push para `main` (ou re-run do Actions se preferires).
+### 4. Painel de Administração e Gestão
+- **Acesso Restrito por Função:** Verificação automática de autenticação e papel (`role === 'admin'`) na tabela de professores. Utilizadores sem permissões administrativas são impedidos de aceder às configurações e são redirecionados automaticamente.
+- **Gestão de Alunos (Rápida):** Atalho lateral no dashboard para adicionar novos alunos de forma célere.
+- **Gestão de Turmas e Ciclos:** Painel completo para criar ciclos de ensino (ex. 3º Ciclo, Secundário) e turmas associadas, especificando o ano letivo.
+- **Importação em Massa via CSV:** Integração com a biblioteca *PapaParse* para importação e leitura de listas de alunos a partir de ficheiros CSV, com inserção otimizada em base de dados em lotes (*batches* de 100).
 
-**URL esperada (Project Page)**
+### 5. Autenticação e Segurança
+- Autenticação de utilizadores gerida pelo **Supabase Auth**.
+- Segurança de dados robusta utilizando **Row Level Security (RLS)** na base de dados do Supabase.
 
-- https://<usuario>.github.io/<repo>/ — ex: `https://antoniorappleton.github.io/scriptorium/`
+---
 
-**Verificações rápidas pós-deploy (substitui a URL pelo teu repo)**
+## Passos para usar:
 
-- Verificar que a página principal responde 200:
+1. **Configurar Supabase:** Criar um projeto no Supabase e configurar as tabelas `alunos`, `professores`, `ocorrencias`, `ciclos` e `turmas` (ver ficheiros em `/db`).
+2. **Atualizar credenciais:** Atualizar o ficheiro `app/js/supabase.js` com a `SUPABASE_URL` e a `SUPABASE_KEY` (utilizar apenas a chave pública `anon`).
+3. **Servir localmente:** Servir a pasta `app` (ex: `npx http-server ./app -p 8080` ou usar VS Code Live Server).
+4. **Testar login:** Autenticar com o utilizador do Supabase (Magic Link ou password).
 
-```bash
-curl -I -L https://antoniorappleton.github.io/scriptorium/ | head -n 1
-```
+---
+
+## Deploy & Verificação (GitHub Pages)
+
+- O workflow `.github/workflows/deploy-pages.yml` publica a pasta `app/` para a branch `gh-pages` automaticamente ao efetuar push para a branch `main`.
+- URL da aplicação publicada: `https://antoniorappleton.github.io/scriptorium/`
+
+### Verificações rápidas pós-deploy:
+
+- Verificar que a página principal responde com sucesso (200):
+  ```bash
+  curl -I -L https://antoniorappleton.github.io/scriptorium/ | head -n 1
+  ```
 
 - Verificar que a página de login está acessível:
+  ```bash
+  curl -sSf https://antoniorappleton.github.io/scriptorium/login.html >/dev/null && echo "login OK" || echo "login NOK"
+  ```
 
-```bash
-curl -sSf https://antoniorappleton.github.io/scriptorium/login.html >/dev/null && echo "login OK" || echo "login NOK"
-```
+- Verificar que os assets essenciais são carregados corretamente:
+  ```bash
+  curl -I https://antoniorappleton.github.io/scriptorium/css/styles.css
+  curl -I https://antoniorappleton.github.io/scriptorium/js/supabase.js
+  ```
 
-- Verificar assets essenciais (CSS/JS) não retornam 404:
+---
 
-```bash
-curl -I https://antoniorappleton.github.io/scriptorium/css/styles.css
-curl -I https://antoniorappleton.github.io/scriptorium/js/supabase.js
-```
+## Estrutura do Repositório
 
-**Teste local rápido (antes de push)**
-
-```bash
-# a partir da raiz do repositório
-npx http-server ./app -p 8080
-# ou
-cd app && python -m http.server 8080
-
-# abrir http://localhost:8080/
-```
-
-**Teste de login**
-
-- Abrir `app/login.html` localmente ou a URL publicada e tentar autenticar com um utilizador existente no Supabase.
-- Se quiseres uma conta de teste, usa os comandos em `docs/create-users.md` para criar `scriptorium@colegio-ramalhao.com`.
-
-**Service worker / PWA**
-
-- Verifica no DevTools → Application → Service Workers que o `service-worker.js` está instalado e activo.
-- Forçar reload: abrir DevTools → Application → Service Workers → `Skip waiting` / unregister durante debugging.
-
-**Notas de segurança**
-
-- Nunca comites a `service_role` key do Supabase. Os exemplos abaixo usam *placeholders* que deves substituir localmente.
-- No cliente, usa apenas a `anon/public` key.
-
-Para comandos de criação de utilizadores e SQL (ex.: criar `scriptorium@colegio-ramalhao.com`) vê `docs/create-users.md`.
-
+- `app/` — Código fonte completo da aplicação PWA (HTML, CSS, JS, Assets).
+- `db/` — Scripts SQL para criação das tabelas e migrações do banco de dados no Supabase.
+- `docs/` — Documentação complementar (desenvolvimento local, etc.).
+- `docs_backup/` — Instruções originais de configuração e suporte.
