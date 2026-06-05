@@ -74,3 +74,17 @@ A aplicação foi desenvolvida com um design system moderno em **Vanilla CSS** q
 - `db/` — Scripts SQL para criação das tabelas e migrações do banco de dados no Supabase.
 - `docs/` — Documentação complementar (desenvolvimento local, etc.).
 - `docs_backup/` — Instruções originais de configuração e suporte.
+
+Scriptorium/ (Raiz)
+├── .github/workflows/deploy-pages.yml  --> Configurado para publicar a pasta ./app
+├── app/                                --> A APLICAÇÃO ATUALIZADA (UI/UX Premium & Offline)
+│   ├── assets/ (Imagens e Logos)
+│   ├── css/styles.css                  --> Novo Design System nativo (Vanilla CSS)
+│   ├── js/ (app.js, admin.js, supabase.js)
+│   ├── index.html, login.html, registar.html, admin.html
+│   ├── manifest.json
+│   └── service-worker.js
+├── db/                                 --> Scripts SQL de tabelas e migrações
+├── docs/LOCAL_DEV.md                   --> Atualizado para apontar para a pasta /app
+├── index.html                          --> Redirecionamento para /app
+└── README.md                           --> Atualizado com as funcionalidades da aplicação
