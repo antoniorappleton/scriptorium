@@ -9,169 +9,189 @@
       content="Portal Académico — registo de ocorrências"
     />
     <link rel="manifest" href="manifest.json" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   </head>
   <body>
-    <header
-      class="bg-primary flex justify-between items-center px-5 md:px-8 w-full fixed top-0 z-50 h-16 border-b border-gray-200"
-    >
-      <div class="flex items-center gap-3">
+    <header class="app-header">
+      <a href="index.html" class="brand">
         <img
           src="assets/logo.png"
-          alt="logo"
-          class="h-10 w-10 object-contain"
+          alt="Scriptorium Logo"
+          class="brand-logo"
         />
-        <h1 class="text-lg font-semibold">SCRIPTORIUM</h1>
-      </div>
-      <nav class="hidden md:flex gap-6 items-center">
-        <a class="text-sm text-gray-700 hover:underline" href="#">Dashboard</a>
-        <a class="text-sm text-gray-700 hover:underline" href="#">Registos</a>
-        <a class="text-sm text-gray-700 hover:underline" href="login.html"
-          >Entrar</a
-        >
-        <button id="signOutBtn" class="text-sm text-gray-700 hover:underline">
-          Sair
-        </button>
+        <div class="brand-text">
+          <h1>SCRIPTORIUM</h1>
+          <div class="tag">Portal Académico</div>
+        </div>
+      </a>
+      <nav class="nav-menu">
+        <a href="index.html" class="active">Dashboard</a>
+        <a href="registar.html">Registar Ocorrência</a>
+        <a href="admin.html" id="adminNavLink" style="display: none;">Administração</a>
+        <button id="signOutBtn">Sair</button>
       </nav>
     </header>
+
     <script>
       // wire sign out button when header loads
       document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById("signOutBtn");
-        if (btn)
+        if (btn) {
           btn.addEventListener("click", () => {
             if (typeof signOut === "function") signOut();
           });
+        }
       });
     </script>
 
-    <main class="max-w-7xl mx-auto pt-20">
-      <section
-        class="relative w-full h-[40vh] md:h-[50vh] overflow-hidden mb-8"
-      >
+    <main class="app-container">
+      <!-- Hero Banner -->
+      <section class="hero-banner">
         <img
           alt="Academic Campus"
-          class="w-full h-full object-cover"
+          class="hero-img"
           src="assets/Scriptorium.jpg"
         />
-        <div
-          class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6"
-        >
-          <div class="text-white">
-            <h2 class="text-3xl font-bold">Bem-vindo ao</h2>
-            <p class="mt-2 max-w-2xl">
-              A sua plataforma para registo de ocorrências e gestão académica.
+        <div class="hero-overlay">
+          <div class="hero-text">
+            <h2>Bem-vindo ao Scriptorium</h2>
+            <p>
+              A sua plataforma de registo de ocorrências escolares e gestão académica.
             </p>
           </div>
         </div>
       </section>
 
-      <section class="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 md:px-0">
-        <div class="md:col-span-2 bg-white rounded-lg shadow p-6">
-          <h3 class="text-xl font-semibold mb-4">Visão Geral</h3>
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="p-4 bg-surface-container-low rounded-lg">
-              <div class="text-sm text-on-surface-variant">Hoje</div>
-              <div class="text-2xl font-bold" id="metric-today">--</div>
+      <!-- Dashboard Grid Layout -->
+      <div class="dashboard-grid">
+        <!-- Left Column: Stats & Chart -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Overview Card -->
+          <div class="app-card">
+            <h3 class="app-card-title">Visão Geral</h3>
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Hoje</div>
+                <div class="metric-value" id="metric-today">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Este Mês</div>
+                <div class="metric-value" id="metric-month">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Este Ano</div>
+                <div class="metric-value" id="metric-year">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Alunos Únicos</div>
+                <div class="metric-value" id="metric-students">--</div>
+              </div>
             </div>
-            <div class="p-4 bg-surface-container-low rounded-lg">
-              <div class="text-sm text-on-surface-variant">Este mês</div>
-              <div class="text-2xl font-bold" id="metric-month">--</div>
-            </div>
-            <div class="p-4 bg-surface-container-low rounded-lg">
-              <div class="text-sm text-on-surface-variant">Este ano</div>
-              <div class="text-2xl font-bold" id="metric-year">--</div>
-            </div>
-            <div class="p-4 bg-surface-container-low rounded-lg">
-              <div class="text-sm text-on-surface-variant">Alunos únicos</div>
-              <div class="text-2xl font-bold" id="metric-students">--</div>
+            
+            <div class="action-bar">
+              <a href="registar.html" class="btn btn-primary">➕ Registar Ocorrência</a>
+              <button id="syncBtn" class="btn btn-sync" style="display: none;">
+                🔄 Sincronizar Pendentes
+              </button>
             </div>
           </div>
-          <div class="mb-6">
-            <a
-              href="registar.html"
-              class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md"
-              >➕ Registar Ocorrência</a
-            >
-          </div>
-          <div class="p-4 bg-surface-container-low rounded-lg">
-            <!-- placeholder for charts -->
-            <div class="text-sm text-on-surface-variant mb-2">
-              Ocorrências (últimos 7 dias)
-            </div>
-            <div
-              class="h-40 bg-white rounded border border-gray-100 flex items-center justify-center"
-            >
-              Gráfico placeholder
+
+          <!-- Chart Card -->
+          <div class="app-card">
+            <h3 class="app-card-title">Estatísticas Semanais</h3>
+            <div class="chart-container" id="chartWrapper">
+              <div id="chartPlaceholder" style="text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 60px;">
+                A carregar dados do gráfico...
+              </div>
             </div>
           </div>
         </div>
 
-        <aside class="bg-white rounded-lg shadow p-6">
-          <h3 class="text-lg font-semibold mb-3">Ocorrências Recentes</h3>
-          <input
-            id="search"
-            placeholder="Pesquisar por aluno..."
-            class="w-full rounded-md border-gray-200 mb-3 p-2"
-          />
-          <div id="ocorrenciasList" class="space-y-2">Carregando…</div>
-          <!-- Admin panel: visível apenas para utilizadores com role=admin -->
-          <div id="adminPanel" class="mt-6 hidden">
-            <h4 class="text-md font-semibold mb-2">Área Administrativa</h4>
-            <form id="addAlunoForm" class="space-y-2 mb-3">
-              <div class="grid grid-cols-3 gap-2">
-                <input
-                  placeholder="Nome do aluno"
-                  id="alunoNomeAdmin"
-                  class="rounded-md border-gray-200 p-2 col-span-2"
-                />
-                <input
-                  placeholder="Ano"
-                  id="alunoAnoAdmin"
-                  class="rounded-md border-gray-200 p-2"
-                />
+        <!-- Right Column: Sidebar -->
+        <div class="sidebar-section">
+          <!-- Recent Occurrences -->
+          <div class="app-card">
+            <h3 class="app-card-title">Ocorrências Recentes</h3>
+            <div class="search-wrapper" style="margin-bottom: 16px;">
+              <span class="search-icon">🔍</span>
+              <input
+                id="search"
+                type="text"
+                placeholder="Pesquisar por aluno..."
+                class="search-input"
+              />
+            </div>
+            <div id="ocorrenciasList" class="ocorrencias-list">
+              <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+                A carregar ocorrências...
               </div>
-              <div class="grid grid-cols-3 gap-2">
-                <input
-                  placeholder="Turma"
-                  id="alunoTurmaAdmin"
-                  class="rounded-md border-gray-200 p-2"
-                />
-                <input
-                  placeholder="Ciclo"
-                  id="alunoCicloAdmin"
-                  class="rounded-md border-gray-200 p-2"
-                />
-                <button
-                  type="submit"
-                  class="bg-green-600 text-white px-3 py-2 rounded-md"
-                >
-                  Adicionar
-                </button>
-              </div>
-            </form>
-            <div>
-              <h5 class="text-sm font-medium mb-2">Alunos existentes</h5>
-              <div id="alunosList" class="max-h-40 overflow-auto text-sm"></div>
             </div>
           </div>
-        </aside>
-      </section>
-    </main>
 
-    <footer class="text-center text-sm text-gray-500 py-4">
-      Versão <span id="appVersion">0.1.2</span>
-    </footer>
+          <!-- Admin Panel (Conditional) -->
+          <div class="app-card" id="adminPanel" style="display: none;">
+            <h3 class="app-card-title">Registar Aluno (Rápido)</h3>
+            <form id="addAlunoForm" style="box-shadow: none; padding: 0;">
+              <div class="form-group">
+                <label for="alunoNomeAdmin">Nome do Aluno</label>
+                <input
+                  placeholder="Nome Completo"
+                  id="alunoNomeAdmin"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="alunoAnoAdmin">Ano</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    placeholder="Ex: 8"
+                    id="alunoAnoAdmin"
+                    class="form-control"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="alunoTurmaAdmin">Turma</label>
+                  <input
+                    placeholder="Ex: A"
+                    id="alunoTurmaAdmin"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="alunoCicloAdmin">Ciclo</label>
+                <input
+                  placeholder="Ex: C3"
+                  id="alunoCicloAdmin"
+                  class="form-control"
+                />
+              </div>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                style="width: 100%; margin-top: 8px;"
+              >
+                Adicionar Aluno
+              </button>
+            </form>
+
+            <div style="margin-top: 24px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">
+                Alunos Criados Recentemente
+              </h4>
+              <div id="alunosList" class="admin-list-container">
+                <div class="admin-list-item" style="color: var(--text-muted);">Sem alunos.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
 
     <script src="js/supabase.js"></script>
     <script>
@@ -184,7 +204,6 @@
           }
         } catch (e) {
           console.error("Auth check failed", e);
-          // fallback: go to login
           window.location.href = "login.html";
         }
       })();
@@ -195,7 +214,6 @@
         navigator.serviceWorker
           .register("service-worker.js")
           .then((reg) => {
-            // If there's an updated worker already waiting, reload to load it
             if (reg.waiting) {
               reg.waiting.postMessage({ type: "SKIP_WAITING" });
             }
@@ -207,7 +225,6 @@
                   newWorker.state === "installed" &&
                   navigator.serviceWorker.controller
                 ) {
-                  // New content available, notify and reload
                   newWorker.postMessage({ type: "SKIP_WAITING" });
                 }
               });

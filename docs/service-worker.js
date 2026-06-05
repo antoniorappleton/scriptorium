@@ -1,4 +1,4 @@
-const CACHE_NAME = "scriptorium-v4";
+const CACHE_NAME = "scriptorium-v3";
 const PRECACHE = [
   "./",
   "index.html",
@@ -15,20 +15,21 @@ const PRECACHE = [
   "assets/Scriptorium.jpg",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js",
   "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js",
-  "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap",
+  "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      // We wrap it in a try-catch or map to handle individual failures if any external URL is down
       return Promise.allSettled(
         PRECACHE.map((url) => {
           return cache.add(url).catch((err) => {
             console.warn(`Precache failed for: ${url}`, err);
           });
-        }),
+        })
       );
-    }),
+    })
   );
   self.skipWaiting();
 });
@@ -65,10 +66,9 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => {
+          // Try to match the exact page request first, fallback to root/index.html
           return caches.match(req).then((cachedResponse) => {
-            return (
-              cachedResponse || caches.match("index.html") || caches.match("./")
-            );
+            return cachedResponse || caches.match("index.html") || caches.match("./");
           });
         }),
     );
@@ -80,6 +80,7 @@ self.addEventListener("fetch", (event) => {
     caches.match(req).then((cached) => {
       const networkFetch = fetch(req)
         .then((res) => {
+          // only cache successful GET responses
           if (req.method === "GET" && res && res.status === 200) {
             const resClone = res.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
