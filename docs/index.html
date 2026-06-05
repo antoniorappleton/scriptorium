@@ -46,11 +46,12 @@
     </header>
     <script>
       // wire sign out button when header loads
-      document.addEventListener('DOMContentLoaded', () => {
-        const btn = document.getElementById('signOutBtn');
-        if (btn) btn.addEventListener('click', () => {
-          if (typeof signOut === 'function') signOut();
-        });
+      document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("signOutBtn");
+        if (btn)
+          btn.addEventListener("click", () => {
+            if (typeof signOut === "function") signOut();
+          });
       });
     </script>
 
