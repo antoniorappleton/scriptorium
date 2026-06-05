@@ -2,17 +2,15 @@ async function registarOcorrencia(dados) {
   try {
     const { error } = await window.supabase.from("ocorrencias").insert([dados]);
     if (error) throw error;
-    alert("Registo feito!");
     carregarOcorrencias();
+    return { ok: true };
   } catch (err) {
-    console.warn("Envio falhou — guardando localmente", err.message);
+    console.warn("Envio falhou — guardando localmente", err?.message || err);
     const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
     pendentes.push(dados);
     localStorage.setItem("pendentes", JSON.stringify(pendentes));
-    alert(
-      'Sem ligação — registo guardado localmente. Use "Sincronizar pendentes" quando tiver internet.',
-    );
     carregarOcorrencias();
+    return { ok: false, error: err };
   }
 }
 
@@ -149,14 +147,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (form) {
     const dataInput = document.getElementById("data");
     if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
-
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const alunoNomeEl = document.getElementById("alunoNome");
       const anoEl = document.getElementById("ano");
       const turmaEl = document.getElementById("turma");
       const motivoEl = document.getElementById("motivo");
       const dataEl = document.getElementById("data");
+      const submitBtn = form.querySelector("button[type=submit]");
 
       const dados = {
         aluno_nome: alunoNomeEl ? alunoNomeEl.value : "",
@@ -167,9 +165,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         created_at: new Date().toISOString(),
       };
 
-      registarOcorrencia(dados);
-      form.reset();
-      if (dataEl) dataEl.value = new Date().toISOString().slice(0, 10);
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "A registar…";
+      }
+
+      const res = await registarOcorrencia(dados);
+
+      if (res?.ok) {
+        if (submitBtn) submitBtn.textContent = "Registar";
+        form.reset();
+        if (dataEl) dataEl.value = new Date().toISOString().slice(0, 10);
+        // redireciona para o index após registo
+        window.location.href = "index.html";
+      } else {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Registar";
+        }
+        alert(
+          "Falha no registo: " +
+            (res?.error?.message || "sem ligação; guardado localmente"),
+        );
+      }
     });
   }
 

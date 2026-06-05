@@ -8,7 +8,7 @@
       name="description"
       content="Portal Académico — registo de ocorrências"
     />
-    <link rel="manifest" href="/app/manifest.json" />
+    <link rel="manifest" href="manifest.json" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap"
@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/app/css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   </head>
   <body>
@@ -27,7 +27,7 @@
     >
       <div class="flex items-center gap-3">
         <img
-          src="/app/assets/logo.png"
+          src="assets/logo.png"
           alt="logo"
           class="h-10 w-10 object-contain"
         />
@@ -36,7 +36,7 @@
       <nav class="hidden md:flex gap-6 items-center">
         <a class="text-sm text-gray-700 hover:underline" href="#">Dashboard</a>
         <a class="text-sm text-gray-700 hover:underline" href="#">Registos</a>
-        <a class="text-sm text-gray-700 hover:underline" href="/app/login.html"
+        <a class="text-sm text-gray-700 hover:underline" href="login.html"
           >Entrar</a
         >
       </nav>
@@ -49,7 +49,7 @@
         <img
           alt="Academic Campus"
           class="w-full h-full object-cover"
-          src="/app/assets/Scriptorium.jpg"
+          src="assets/Scriptorium.jpg"
         />
         <div
           class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6"
@@ -86,7 +86,7 @@
           </div>
           <div class="mb-6">
             <a
-              href="/app/registar.html"
+              href="registar.html"
               class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md"
               >➕ Registar Ocorrência</a
             >
@@ -156,27 +156,27 @@
       </section>
     </main>
 
-    <script src="/app/js/supabase.js"></script>
+    <script src="js/supabase.js"></script>
     <script>
       (async () => {
         if (window.supabaseReady) await window.supabaseReady;
         try {
           const { data } = await window.supabase.auth.getSession();
           if (!data?.session) {
-            window.location.href = "/app/login.html";
+            window.location.href = "login.html";
           }
         } catch (e) {
           console.error("Auth check failed", e);
           // fallback: go to login
-          window.location.href = "/app/login.html";
+          window.location.href = "login.html";
         }
       })();
     </script>
-    <script src="/app/js/app.js"></script>
+    <script src="js/app.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker
-          .register("/app/service-worker.js")
+          .register("service-worker.js")
           .then((reg) => {
             // If there's an updated worker already waiting, reload to load it
             if (reg.waiting) {

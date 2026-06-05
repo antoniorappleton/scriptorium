@@ -9,13 +9,13 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/app/css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="/app/js/supabase.js"></script>
+    <script src="js/supabase.js"></script>
   </head>
   <body>
     <main class="login-main">
-      <img src="/app/assets/logo.png" alt="Scriptorium" class="login-logo" />
+      <img src="assets/logo.png" alt="Scriptorium" class="login-logo" />
       <h1>Entrar — Professores</h1>
       <form id="loginForm">
         <label class="block text-sm">Email</label>
@@ -23,6 +23,8 @@
           type="email"
           id="email"
           required
+          placeholder="scriptorium@colegio-ramalhao.com"
+          autofocus
           class="mt-1 block w-full rounded-md border-gray-200 p-2"
         />
         <label class="block text-sm mt-3">Password</label>
@@ -45,6 +47,9 @@
         </div>
       </form>
       <p id="msg" class="mt-3 text-sm"></p>
+      <p class="mt-2 text-sm text-gray-500">
+        Conta de teste: <strong>scriptorium@colegio-ramalhao.com</strong>
+      </p>
     </main>
 
     <script>
@@ -55,7 +60,7 @@
         try {
           const { data } = await window.supabase.auth.getSession();
           if (data?.session) {
-            window.location.href = "/app/index.html";
+            window.location.href = "index.html";
             return;
           }
         } catch (e) {
@@ -69,6 +74,9 @@
           msg.textContent = "";
           const email = document.getElementById("email").value.trim();
           const password = document.getElementById("password").value;
+          const submitBtn = form.querySelector("button[type=submit]");
+          submitBtn.disabled = true;
+          submitBtn.textContent = "A entrar…";
           if (!email || !password)
             return (msg.textContent = "Email e password são obrigatórios");
 
@@ -77,10 +85,12 @@
           );
           if (error) {
             msg.textContent = "Erro: " + error.message;
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Entrar";
             return;
           }
           // Successful login
-          window.location.href = "/app/index.html";
+          window.location.href = "index.html";
         });
 
         document

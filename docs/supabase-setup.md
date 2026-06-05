@@ -19,6 +19,6 @@ CREATE POLICY insert_ocorrencias ON ocorrencias FOR INSERT
 
 6. (Opcional) Criar um utilizador professor manualmente em `professores` ou usar Signup.
 
-7. Testes locais: servir a pasta e abrir `/app/index.html`.
+7. Testes locais: servir a pasta e abrir `app/index.html`.
 
 Se quiser, posso automatizar a criação das policies SQL para ti ou tentar executar os passos via supabase CLI (necessita autenticação local).

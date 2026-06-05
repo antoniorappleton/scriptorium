@@ -1,12 +1,12 @@
 const CACHE_NAME = "scriptorium-v2";
 const PRECACHE = [
-  "/app/index.html",
-  "/app/login.html",
-  "/app/css/styles.css",
-  "/app/js/app.js",
-  "/app/js/supabase.js",
-  "/app/manifest.json",
-  "/app/assets/logo.png",
+  "index.html",
+  "login.html",
+  "css/styles.css",
+  "js/app.js",
+  "js/supabase.js",
+  "manifest.json",
+  "assets/logo.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -45,10 +45,10 @@ self.addEventListener("fetch", (event) => {
           const copy = res.clone();
           caches
             .open(CACHE_NAME)
-            .then((cache) => cache.put("/app/index.html", copy));
+            .then((cache) => cache.put("index.html", copy));
           return res;
         })
-        .catch(() => caches.match("/app/index.html")),
+        .catch(() => caches.match("index.html")),
     );
     return;
   }
