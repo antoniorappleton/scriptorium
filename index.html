@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Academic Portal — Scriptorium</title>
+    <meta
+      name="description"
+      content="Portal Académico — registo de ocorrências"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <a href="index.html" class="brand">
+        <img
+          src="assets/logo.png"
+          alt="Scriptorium Logo"
+          class="brand-logo"
+        />
+        <div class="brand-text">
+          <h1>SCRIPTORIUM</h1>
+          <div class="tag">Portal Académico</div>
+        </div>
+      </a>
+      <nav class="nav-menu">
+        <a href="index.html" class="active">Dashboard</a>
+        <a href="registar.html">Registar Ocorrência</a>
+        <a href="admin.html" id="adminNavLink" style="display: none;">Administração</a>
+        <button id="signOutBtn">Sair</button>
+      </nav>
+    </header>
+
+    <script>
+      // wire sign out button when header loads
+      document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("signOutBtn");
+        if (btn) {
+          btn.addEventListener("click", () => {
+            if (typeof signOut === "function") signOut();
+          });
+        }
+      });
+    </script>
+
+    <main class="app-container">
+      <!-- Hero Banner -->
+      <section class="hero-banner">
+        <img
+          alt="Academic Campus"
+          class="hero-img"
+          src="assets/Scriptorium.jpg"
+        />
+        <div class="hero-overlay">
+          <div class="hero-text">
+            <h2>Bem-vindo ao Scriptorium</h2>
+            <p>
+              A sua plataforma de registo de ocorrências escolares e gestão académica.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard Grid Layout -->
+      <div class="dashboard-grid">
+        <!-- Left Column: Stats & Chart -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Overview Card -->
+          <div class="app-card">
+            <h3 class="app-card-title">Visão Geral</h3>
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Hoje</div>
+                <div class="metric-value" id="metric-today">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Este Mês</div>
+                <div class="metric-value" id="metric-month">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Este Ano</div>
+                <div class="metric-value" id="metric-year">--</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Alunos Únicos</div>
+                <div class="metric-value" id="metric-students">--</div>
+              </div>
+            </div>
+            
+            <div class="action-bar">
+              <a href="registar.html" class="btn btn-primary">➕ Registar Ocorrência</a>
+              <button id="syncBtn" class="btn btn-sync" style="display: none;">
+                🔄 Sincronizar Pendentes
+              </button>
+            </div>
+          </div>
+
+          <!-- Chart Card -->
+          <div class="app-card">
+            <h3 class="app-card-title">Estatísticas Semanais</h3>
+            <div class="chart-container" id="chartWrapper">
+              <div id="chartPlaceholder" style="text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 60px;">
+                A carregar dados do gráfico...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Sidebar -->
+        <div class="sidebar-section">
+          <!-- Recent Occurrences -->
+          <div class="app-card">
+            <h3 class="app-card-title">Ocorrências Recentes</h3>
+            <div class="search-wrapper" style="margin-bottom: 16px;">
+              <span class="search-icon">🔍</span>
+              <input
+                id="search"
+                type="text"
+                placeholder="Pesquisar por aluno..."
+                class="search-input"
+              />
+            </div>
+            <div id="ocorrenciasList" class="ocorrencias-list">
+              <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+                A carregar ocorrências...
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Panel (Conditional) -->
+          <div class="app-card" id="adminPanel" style="display: none;">
+            <h3 class="app-card-title">Registar Aluno (Rápido)</h3>
+            <form id="addAlunoForm" style="box-shadow: none; padding: 0;">
+              <div class="form-group">
+                <label for="alunoNomeAdmin">Nome do Aluno</label>
+                <input
+                  placeholder="Nome Completo"
+                  id="alunoNomeAdmin"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="alunoAnoAdmin">Ano</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    placeholder="Ex: 8"
+                    id="alunoAnoAdmin"
+                    class="form-control"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="alunoTurmaAdmin">Turma</label>
+                  <input
+                    placeholder="Ex: A"
+                    id="alunoTurmaAdmin"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="alunoCicloAdmin">Ciclo</label>
+                <input
+                  placeholder="Ex: C3"
+                  id="alunoCicloAdmin"
+                  class="form-control"
+                />
+              </div>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                style="width: 100%; margin-top: 8px;"
+              >
+                Adicionar Aluno
+              </button>
+            </form>
+
+            <div style="margin-top: 24px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">
+                Alunos Criados Recentemente
+              </h4>
+              <div id="alunosList" class="admin-list-container">
+                <div class="admin-list-item" style="color: var(--text-muted);">Sem alunos.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="js/supabase.js"></script>
+    <script>
+      (async () => {
+        if (window.supabaseReady) await window.supabaseReady;
+        try {
+          const { data } = await window.supabase.auth.getSession();
+          if (!data?.session) {
+            window.location.href = "login.html";
+          }
+        } catch (e) {
+          console.error("Auth check failed", e);
+          window.location.href = "login.html";
+        }
+      })();
+    </script>
+    <script src="js/app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("service-worker.js")
+          .then((reg) => {
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: "SKIP_WAITING" });
+            }
+
+            reg.addEventListener("updatefound", () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  newWorker.postMessage({ type: "SKIP_WAITING" });
+                }
+              });
+            });
+
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              if (refreshing) return;
+              refreshing = true;
+              window.location.reload();
+            });
+          })
+          .catch(console.error);
+      }
+    </script>
+  </body>
+</html>
