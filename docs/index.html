@@ -39,8 +39,20 @@
         <a class="text-sm text-gray-700 hover:underline" href="login.html"
           >Entrar</a
         >
+        <button id="signOutBtn" class="text-sm text-gray-700 hover:underline">
+          Sair
+        </button>
       </nav>
     </header>
+    <script>
+      // wire sign out button when header loads
+      document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('signOutBtn');
+        if (btn) btn.addEventListener('click', () => {
+          if (typeof signOut === 'function') signOut();
+        });
+      });
+    </script>
 
     <main class="max-w-7xl mx-auto pt-20">
       <section

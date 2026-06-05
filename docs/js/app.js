@@ -51,6 +51,24 @@ async function isCurrentUserAdmin() {
   }
 }
 
+// Sign out helper - used by header button
+async function signOut() {
+  try {
+    if (window.supabaseReady) await window.supabaseReady;
+    const { error } = await window.supabase.auth.signOut();
+    if (error) {
+      alert("Erro no logout: " + error.message);
+      return;
+    }
+    // Clear local state
+    localStorage.removeItem("pendentes");
+    window.location.href = "login.html";
+  } catch (e) {
+    console.error("signOut error", e);
+    alert("Erro no logout");
+  }
+}
+
 async function addAluno(payload) {
   try {
     const { error } = await window.supabase.from("alunos").insert([payload]);
