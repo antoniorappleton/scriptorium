@@ -69,19 +69,40 @@
 
         const form = document.getElementById("loginForm");
         const msg = document.getElementById("msg");
+
+        function isValidEmail(v) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        }
+
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
           msg.textContent = "";
-          const email = document.getElementById("email").value.trim();
+          const rawEmail = document.getElementById("email").value || "";
+          const email = rawEmail.trim().toLowerCase();
           const password = document.getElementById("password").value;
           const submitBtn = form.querySelector("button[type=submit]");
           submitBtn.disabled = true;
           submitBtn.textContent = "A entrar…";
-          if (!email || !password)
-            return (msg.textContent = "Email e password são obrigatórios");
+
+          if (!email || !password) {
+            msg.textContent = "Email e password são obrigatórios";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Entrar";
+            return;
+          }
+
+          if (!isValidEmail(email)) {
+            msg.textContent = "Email inválido — confirma o endereço";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Entrar";
+            return;
+          }
 
           const { data, error } = await window.supabase.auth.signInWithPassword(
-            { email, password },
+            {
+              email,
+              password,
+            },
           );
           if (error) {
             msg.textContent = "Erro: " + error.message;
@@ -96,10 +117,18 @@
         document
           .getElementById("forgot")
           .addEventListener("click", async () => {
-            const email = document.getElementById("email").value.trim();
-            if (!email)
-              return (msg.textContent =
-                "Coloca o teu email primeiro para recuperar a password");
+            msg.textContent = "";
+            const rawEmail = document.getElementById("email").value || "";
+            const email = rawEmail.trim().toLowerCase();
+            if (!email) {
+              msg.textContent =
+                "Coloca o teu email primeiro para recuperar a password";
+              return;
+            }
+            if (!isValidEmail(email)) {
+              msg.textContent = "Email inválido — confirma o endereço";
+              return;
+            }
             const { error } =
               await window.supabase.auth.resetPasswordForEmail(email);
             if (error) msg.textContent = "Erro: " + error.message;
