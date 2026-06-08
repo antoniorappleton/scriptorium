@@ -43,6 +43,7 @@ async function refreshTurmas() {
       "</div>";
     return;
   }
+
   const turmas = (data || []).slice();
   const filtered = selectedAno
     ? turmas.filter((t) => String(t.ano) === selectedAno)
@@ -64,6 +65,49 @@ async function refreshTurmas() {
         </div>`,
     )
     .join("");
+}
+
+async function getUserByEmail(email) {
+  if (!window.supabase.auth?.admin) {
+    throw new Error("API de administração do Supabase não está disponível.");
+  }
+
+  let response;
+  try {
+    response = await window.supabase.auth.admin.listUsers({ search: email });
+  } catch (e) {
+    response = await window.supabase.auth.admin.listUsers();
+  }
+
+  if (response?.error) {
+    throw response.error;
+  }
+
+  const users = Array.isArray(response?.data?.users)
+    ? response.data.users
+    : Array.isArray(response?.data)
+    ? response.data
+    : [];
+  return users.find((u) => u.email === email) || null;
+}
+
+async function updateUserPasswordByEmail(email, password) {
+  const user = await getUserByEmail(email);
+  if (!user) {
+    throw new Error("Utilizador não encontrado: " + email);
+  }
+
+  if (!window.supabase.auth?.admin?.updateUserById) {
+    throw new Error("A atualização de utilizador não está disponível na API Supabase atual.");
+  }
+
+  const { error } = await window.supabase.auth.admin.updateUserById(user.id, {
+    password,
+  });
+  if (error) {
+    throw error;
+  }
+  return true;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -144,6 +188,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     await refreshTurmas();
     alert("Turma criada com sucesso!");
   });
+
+  const updatePasswordBtn = document.getElementById("updatePasswordBtn");
+  if (updatePasswordBtn) {
+    updatePasswordBtn.addEventListener("click", async () => {
+      const email = document.getElementById("updateUserEmail").value.trim();
+      const password = document.getElementById("updateUserPassword").value;
+      const statusEl = document.getElementById("updatePasswordStatus");
+
+      if (!password) return alert("Insira a nova password para atualizar o utilizador.");
+      if (statusEl) {
+        statusEl.className = "alert alert-success";
+        statusEl.style.display = "block";
+        statusEl.textContent = "A atualizar password...";
+      }
+
+      try {
+        await updateUserPasswordByEmail(email, password);
+        if (statusEl) {
+          statusEl.className = "alert alert-success";
+          statusEl.textContent = "Password atualizada com sucesso.";
+        }
+        document.getElementById("updateUserPassword").value = "";
+      } catch (err) {
+        console.error("Password update error", err);
+        if (statusEl) {
+          statusEl.className = "alert alert-error";
+          statusEl.textContent = "Erro ao atualizar password: " +
+            (err?.message || String(err));
+        }
+        alert("Erro ao atualizar password: " + (err?.message || String(err)));
+      }
+    });
+  }
 
   document.getElementById("importCsv").addEventListener("click", async () => {
     const f = document.getElementById("csvFile").files[0];
