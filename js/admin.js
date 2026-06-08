@@ -20,17 +20,22 @@ async function loadCiclos() {
 async function refreshTurmas() {
   const el = document.getElementById("turmasList");
   if (!el) return;
-  el.innerHTML = "<div class='admin-list-item' style='color: var(--text-muted);'>A carregar...</div>";
+  el.innerHTML =
+    "<div class='admin-list-item' style='color: var(--text-muted);'>A carregar...</div>";
   const { data, error } = await window.supabase
     .from("turmas")
     .select("*, ciclos(*)")
     .order("nome");
   if (error) {
-    el.innerHTML = "<div class='admin-list-item' style='color: var(--error);'>Erro ao carregar turmas: " + error.message + "</div>";
+    el.innerHTML =
+      "<div class='admin-list-item' style='color: var(--error);'>Erro ao carregar turmas: " +
+      error.message +
+      "</div>";
     return;
   }
   if (!data || !data.length) {
-    el.innerHTML = "<div class='admin-list-item' style='color: var(--text-muted);'>Nenhuma turma criada.</div>";
+    el.innerHTML =
+      "<div class='admin-list-item' style='color: var(--text-muted);'>Nenhuma turma criada.</div>";
     return;
   }
   el.innerHTML = (data || [])
@@ -46,23 +51,33 @@ async function refreshTurmas() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.supabaseReady) await window.supabaseReady;
-  
+
   // Security checks: force login and role == admin
   try {
-    const { data: { session } } = await window.supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await window.supabase.auth.getSession();
     if (!session) {
       window.location.href = "login.html";
       return;
     }
-    
+
     const { data: prof, error: profError } = await window.supabase
       .from("professores")
       .select("role")
       .eq("email", session.user.email)
-      .single();
-      
+      .maybeSingle();
+
     if (profError || prof?.role !== "admin") {
-      alert("Acesso negado: Apenas administradores podem aceder a esta página.");
+      console.error("Admin check failed", { prof, profError });
+      // Show a more informative alert during debugging
+      const errMsg = profError
+        ? profError.message || String(profError)
+        : "Sem permissão de admin";
+      alert(
+        "Acesso negado: Apenas administradores podem aceder a esta página.\n\nDetalhe: " +
+          errMsg,
+      );
       window.location.href = "index.html";
       return;
     }
@@ -79,10 +94,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("createCiclo").addEventListener("click", async () => {
     const nome = document.getElementById("cicloNome").value.trim();
     if (!nome) return alert("Nome do ciclo é obrigatório");
-    
+
     const { error } = await window.supabase.from("ciclos").insert([{ nome }]);
     if (error) return alert("Erro a criar ciclo: " + error.message);
-    
+
     document.getElementById("cicloNome").value = "";
     await loadCiclos();
     alert("Ciclo criado com sucesso!");
@@ -92,14 +107,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const nome = document.getElementById("turmaNome").value.trim();
     const ano = Number(document.getElementById("turmaAno").value) || null;
     const ciclo_id = document.getElementById("turmaCiclo").value || null;
-    
+
     if (!nome) return alert("Nome da turma é obrigatório");
-    
+
     const { error } = await window.supabase
       .from("turmas")
       .insert([{ nome, ano, ciclo_id }]);
     if (error) return alert("Erro a criar turma: " + error.message);
-    
+
     document.getElementById("turmaNome").value = "";
     document.getElementById("turmaAno").value = "";
     document.getElementById("turmaCiclo").value = "";
@@ -110,7 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("importCsv").addEventListener("click", async () => {
     const f = document.getElementById("csvFile").files[0];
     if (!f) return alert("Por favor, selecione um ficheiro CSV primeiro.");
-    
+
     const statusEl = document.getElementById("importStatus");
     if (statusEl) {
       statusEl.className = "alert alert-success";
@@ -130,11 +145,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             criado_em: new Date().toISOString(),
           }))
           .filter((r) => r.nome);
-          
+
         if (statusEl) {
           statusEl.textContent = "A importar " + rows.length + " alunos...";
         }
-        
+
         // bulk insert in batches
         const batchSize = 100;
         for (let i = 0; i < rows.length; i += batchSize) {
@@ -148,10 +163,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             return alert("Erro na importação: " + error.message);
           }
         }
-        
+
         if (statusEl) {
           statusEl.className = "alert alert-success";
-          statusEl.textContent = "Importação concluída: " + rows.length + " alunos inseridos.";
+          statusEl.textContent =
+            "Importação concluída: " + rows.length + " alunos inseridos.";
         }
         document.getElementById("csvFile").value = "";
         await refreshTurmas();
@@ -161,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           statusEl.className = "alert alert-error";
           statusEl.textContent = "Erro ao processar CSV: " + parseError.message;
         }
-      }
+      },
     });
   });
 });

@@ -12,7 +12,11 @@
     <main class="login-container">
       <div class="login-card">
         <div class="login-header">
-          <img src="assets/logo.png" alt="Scriptorium Logo" class="login-logo" />
+          <img
+            src="assets/logo.png"
+            alt="Scriptorium Logo"
+            class="login-logo"
+          />
           <h2>SCRIPTORIUM</h2>
           <p>Portal de Registo de Ocorrências</p>
         </div>
@@ -41,17 +45,25 @@
             />
           </div>
 
-          <div id="msg" style="margin-top: 16px;"></div>
+          <div id="msg" style="margin-top: 16px"></div>
 
-          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px;">
-            <button
-              type="submit"
-              class="btn btn-primary"
-              style="width: 100%;"
-            >
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+              margin-top: 24px;
+            "
+          >
+            <button type="submit" class="btn btn-primary" style="width: 100%">
               Entrar
             </button>
-            <button type="button" id="forgot" class="btn btn-secondary" style="width: 100%;">
+            <button
+              type="button"
+              id="forgot"
+              class="btn btn-secondary"
+              style="width: 100%"
+            >
               Recuperar Palavra-passe
             </button>
           </div>
@@ -67,10 +79,27 @@
       (async () => {
         if (window.supabaseReady) await window.supabaseReady;
 
-        // If already logged in, go to dashboard
+        // If already logged in, redirect according to role
         try {
           const { data } = await window.supabase.auth.getSession();
-          if (data?.session) {
+          const session = data?.session;
+          if (session) {
+            // check role in professores table and redirect admins to admin.html
+            try {
+              const email = session.user.email;
+              const { data: prof } = await window.supabase
+                .from("professores")
+                .select("role")
+                .eq("email", email)
+                .maybeSingle();
+              if (prof?.role === "admin") {
+                window.location.href = "admin.html";
+                return;
+              }
+            } catch (e) {
+              // ignore and fall back to dashboard
+              console.warn("Role check failed", e);
+            }
             window.location.href = "index.html";
             return;
           }
@@ -91,9 +120,9 @@
             return;
           }
           msg.innerHTML = `
-            <div class="alert ${isError ? 'alert-error' : 'alert-success'}">
+            <div class="alert ${isError ? "alert-error" : "alert-success"}">
               <span style="font-size: 16px; font-weight: bold;">
-                ${isError ? '⚠️' : '✓'}
+                ${isError ? "⚠️" : "✓"}
               </span>
               <span>${text}</span>
             </div>
@@ -136,7 +165,27 @@
             submitBtn.textContent = "Entrar";
             return;
           }
-          // Successful login
+          // Successful login: redirect admins to admin screen
+          try {
+            const session =
+              data?.session ||
+              (await window.supabase.auth.getSession()).data.session;
+            const email = session?.user?.email;
+            if (email) {
+              const { data: prof } = await window.supabase
+                .from("professores")
+                .select("role")
+                .eq("email", email)
+                .maybeSingle();
+              if (prof?.role === "admin") {
+                window.location.href = "admin.html";
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("Post-login role check failed", e);
+          }
+          // Default redirect
           window.location.href = "index.html";
         });
 
@@ -147,28 +196,33 @@
             const rawEmail = document.getElementById("email").value || "";
             const email = rawEmail.trim().toLowerCase();
             if (!email) {
-              showMessage("Coloca o teu email primeiro para recuperar a palavra-passe.");
+              showMessage(
+                "Coloca o teu email primeiro para recuperar a palavra-passe.",
+              );
               return;
             }
             if (!isValidEmail(email)) {
               showMessage("Email inválido — confirma o endereço.");
               return;
             }
-            
+
             const forgotBtn = document.getElementById("forgot");
             forgotBtn.disabled = true;
             forgotBtn.textContent = "A processar...";
-            
+
             const { error } =
               await window.supabase.auth.resetPasswordForEmail(email);
-            
+
             forgotBtn.disabled = false;
             forgotBtn.textContent = "Recuperar Palavra-passe";
 
             if (error) {
               showMessage("Erro: " + error.message);
             } else {
-              showMessage("Pedido de recuperação enviado. Verifica o teu email.", false);
+              showMessage(
+                "Pedido de recuperação enviado. Verifica o teu email.",
+                false,
+              );
             }
           });
       })();

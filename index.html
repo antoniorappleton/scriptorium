@@ -15,11 +15,7 @@
   <body>
     <header class="app-header">
       <a href="index.html" class="brand">
-        <img
-          src="assets/logo.png"
-          alt="Scriptorium Logo"
-          class="brand-logo"
-        />
+        <img src="assets/logo.png" alt="Scriptorium Logo" class="brand-logo" />
         <div class="brand-text">
           <h1>SCRIPTORIUM</h1>
           <div class="tag">Portal Académico</div>
@@ -28,13 +24,12 @@
       <nav class="nav-menu">
         <a href="index.html" class="active">Dashboard</a>
         <a href="registar.html">Registar Ocorrência</a>
-        <a href="admin.html" id="adminNavLink" style="display: none;">Administração</a>
+        <a href="admin.html" id="adminNavLink" style="display: none">Administração</a>
         <button id="signOutBtn">Sair</button>
       </nav>
     </header>
 
     <script>
-      // wire sign out button when header loads
       document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById("signOutBtn");
         if (btn) {
@@ -46,27 +41,8 @@
     </script>
 
     <main class="app-container">
-      <!-- Hero Banner -->
-      <section class="hero-banner">
-        <img
-          alt="Academic Campus"
-          class="hero-img"
-          src="assets/Scriptorium.jpg"
-        />
-        <div class="hero-overlay">
-          <div class="hero-text">
-            <h2>Bem-vindo ao Scriptorium</h2>
-            <p>
-              A sua plataforma de registo de ocorrências escolares e gestão académica.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Dashboard Grid Layout -->
       <div class="dashboard-grid">
-        <!-- Left Column: Stats & Chart -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div>
           <!-- Overview Card -->
           <div class="app-card">
             <h3 class="app-card-title">Visão Geral</h3>
@@ -88,10 +64,12 @@
                 <div class="metric-value" id="metric-students">--</div>
               </div>
             </div>
-            
+
             <div class="action-bar">
-              <a href="registar.html" class="btn btn-primary">➕ Registar Ocorrência</a>
-              <button id="syncBtn" class="btn btn-sync" style="display: none;">
+              <a href="registar.html" class="btn btn-primary"
+                >➕ Registar Ocorrência</a
+              >
+              <button id="syncBtn" class="btn btn-sync" style="display: none">
                 🔄 Sincronizar Pendentes
               </button>
             </div>
@@ -101,7 +79,15 @@
           <div class="app-card">
             <h3 class="app-card-title">Estatísticas Semanais</h3>
             <div class="chart-container" id="chartWrapper">
-              <div id="chartPlaceholder" style="text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 60px;">
+              <div
+                id="chartPlaceholder"
+                style="
+                  text-align: center;
+                  color: var(--text-muted);
+                  font-size: 14px;
+                  margin-top: 60px;
+                "
+              >
                 A carregar dados do gráfico...
               </div>
             </div>
@@ -113,7 +99,7 @@
           <!-- Recent Occurrences -->
           <div class="app-card">
             <h3 class="app-card-title">Ocorrências Recentes</h3>
-            <div class="search-wrapper" style="margin-bottom: 16px;">
+            <div class="search-wrapper" style="margin-bottom: 16px">
               <span class="search-icon">🔍</span>
               <input
                 id="search"
@@ -123,16 +109,22 @@
               />
             </div>
             <div id="ocorrenciasList" class="ocorrencias-list">
-              <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+              <div
+                style="
+                  text-align: center;
+                  color: var(--text-muted);
+                  padding: 20px;
+                "
+              >
                 A carregar ocorrências...
               </div>
             </div>
           </div>
 
           <!-- Admin Panel (Conditional) -->
-          <div class="app-card" id="adminPanel" style="display: none;">
+          <div class="app-card" id="adminPanel" style="display: none">
             <h3 class="app-card-title">Registar Aluno (Rápido)</h3>
-            <form id="addAlunoForm" style="box-shadow: none; padding: 0;">
+            <form id="addAlunoForm" style="box-shadow: none; padding: 0">
               <div class="form-group">
                 <label for="alunoNomeAdmin">Nome do Aluno</label>
                 <input
@@ -174,18 +166,27 @@
               <button
                 type="submit"
                 class="btn btn-primary"
-                style="width: 100%; margin-top: 8px;"
+                style="width: 100%; margin-top: 8px"
               >
                 Adicionar Aluno
               </button>
             </form>
 
-            <div style="margin-top: 24px;">
-              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">
+            <div style="margin-top: 24px">
+              <h4
+                style="
+                  font-size: 13px;
+                  font-weight: 600;
+                  margin-bottom: 8px;
+                  color: var(--text-muted);
+                "
+              >
                 Alunos Criados Recentemente
               </h4>
               <div id="alunosList" class="admin-list-container">
-                <div class="admin-list-item" style="color: var(--text-muted);">Sem alunos.</div>
+                <div class="admin-list-item" style="color: var(--text-muted)">
+                  Sem alunos.
+                </div>
               </div>
             </div>
           </div>
@@ -199,8 +200,23 @@
         if (window.supabaseReady) await window.supabaseReady;
         try {
           const { data } = await window.supabase.auth.getSession();
-          if (!data?.session) {
+          const session = data?.session;
+          if (!session) {
             window.location.href = "login.html";
+          } else {
+            try {
+              const email = session.user.email;
+              const { data: prof } = await window.supabase
+                .from("professores")
+                .select("role")
+                .eq("email", email)
+                .maybeSingle();
+              if (prof?.role === "admin") {
+                window.location.href = "admin.html";
+              }
+            } catch (e) {
+              console.warn("Role check failed", e);
+            }
           }
         } catch (e) {
           console.error("Auth check failed", e);
