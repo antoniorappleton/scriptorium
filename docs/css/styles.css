@@ -447,6 +447,44 @@ main.app-container {
   font-size: 18px;
 }
 
+/* Input with SVG icon (used on login inputs) */
+.input-with-icon {
+  position: relative;
+}
+.input-with-icon .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  fill: var(--text-muted);
+  pointer-events: none;
+}
+.input-with-icon .form-control {
+  padding-left: 44px;
+  padding-right: 44px;
+}
+
+.input-with-icon .input-action {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 6px;
+}
+.input-with-icon .input-action svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+}
+
 .ocorrencias-list {
   display: flex;
   flex-direction: column;

@@ -222,6 +222,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Toggle password visibility
+  const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+  if (togglePasswordBtn) {
+    togglePasswordBtn.addEventListener("click", () => {
+      const pwd = document.getElementById("updateUserPassword");
+      if (!pwd) return;
+      if (pwd.type === "password") {
+        pwd.type = "text";
+        togglePasswordBtn.textContent = "🙈";
+      } else {
+        pwd.type = "password";
+        togglePasswordBtn.textContent = "👁️";
+      }
+    });
+  }
+
   document.getElementById("importCsv").addEventListener("click", async () => {
     const f = document.getElementById("csvFile").files[0];
     if (!f) return alert("Por favor, selecione um ficheiro CSV primeiro.");

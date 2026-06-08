@@ -158,12 +158,16 @@
             </div>
             <div class="form-group">
               <label for="updateUserPassword">Nova password</label>
-              <input
-                id="updateUserPassword"
-                type="password"
-                class="form-control"
-                placeholder="Defina a nova password"
-              />
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input
+                  id="updateUserPassword"
+                  type="password"
+                  class="form-control"
+                  placeholder="Defina a nova password"
+                  style="flex:1;"
+                />
+                <button type="button" id="togglePasswordBtn" class="btn btn-secondary" title="Mostrar/ocultar password" style="padding:8px 10px;">👁️</button>
+              </div>
             </div>
             <button
               id="updatePasswordBtn"

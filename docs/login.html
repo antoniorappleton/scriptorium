@@ -20,25 +20,41 @@
         <form id="loginForm">
           <div class="form-group">
             <label for="email">Email do Professor</label>
-            <input
-              type="email"
-              id="email"
-              required
-              placeholder="exemplo@colegio-ramalhao.com"
-              autofocus
-              class="form-control"
-            />
+            <div class="input-with-icon">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+              </svg>
+              <input
+                type="email"
+                id="email"
+                required
+                placeholder="exemplo@colegio-ramalhao.com"
+                autofocus
+                class="form-control"
+              />
+            </div>
           </div>
 
           <div class="form-group">
             <label for="password">Palavra-passe</label>
-            <input
-              type="password"
-              id="password"
-              required
-              placeholder="••••••••"
-              class="form-control"
-            />
+            <div class="input-with-icon">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 17a2 2 0 100-4 2 2 0 000 4zm6-7h-1V7a5 5 0 00-10 0v3H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2zM8 7a4 4 0 018 0v3H8V7z" />
+              </svg>
+              <input
+                type="password"
+                id="password"
+                required
+                placeholder="••••••••"
+                class="form-control"
+              />
+              <button type="button" id="togglePasswordBtn" class="input-action" aria-label="Mostrar palavra-passe">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/>
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div id="msg" style="margin-top: 16px;"></div>
@@ -58,7 +74,7 @@
         </form>
 
         <div class="login-footer">
-          Conta de teste: <strong>scriptorium@colegio-ramalhao.com</strong>
+          Conta: <strong>scriptorium@colegio-ramalhao.com</strong>
         </div>
       </div>
     </main>
@@ -205,6 +221,26 @@
               showMessage("Pedido de recuperação enviado. Verifica o teu email.", false);
             }
           });
+
+        // Password visibility toggle (uses inline SVGs)
+        const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+        if (togglePasswordBtn) {
+          const pwdInput = document.getElementById("password");
+          const EYE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5C7 5 2.73 8.11 1 12c1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 12a5 5 0 110-10 5 5 0 010 10z"/><circle cx="12" cy="12" r="3"/></svg>';
+          const EYE_OFF_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 4.27L3.28 3 21 20.72 19.73 22 17.72 19.99C15.5 21.07 13.78 21.5 12 21.5 7 21.5 2.73 18.39 1 14c.66-1.52 1.6-2.91 2.73-4.03L2 4.27z"/></svg>';
+          togglePasswordBtn.addEventListener("click", () => {
+            if (!pwdInput) return;
+            if (pwdInput.type === "password") {
+              pwdInput.type = "text";
+              togglePasswordBtn.innerHTML = EYE_OFF_SVG;
+              togglePasswordBtn.setAttribute("aria-label", "Ocultar palavra-passe");
+            } else {
+              pwdInput.type = "password";
+              togglePasswordBtn.innerHTML = EYE_SVG;
+              togglePasswordBtn.setAttribute("aria-label", "Mostrar palavra-passe");
+            }
+          });
+        }
       })();
     </script>
     <footer style="padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px;">

@@ -336,6 +336,116 @@ function renderChart(rows) {
   `;
 }
 
+let dashboardRows = [];
+
+function formatMonthLabel(yearMonth) {
+  const [year, month] = yearMonth.split("-");
+  const monthNames = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+  ];
+  return `${monthNames[Number(month) - 1] || month} ${year}`;
+}
+
+function getDashboardFilters() {
+  return {
+    ano: document.getElementById("dashboard-filter-ano")?.value || "",
+    turma: document.getElementById("dashboard-filter-turma")?.value || "",
+    month: document.getElementById("dashboard-filter-month")?.value || "",
+    period: document.getElementById("dashboard-filter-period")?.value || "all",
+  };
+}
+
+function applyDashboardFilters(rows) {
+  const { ano, turma, month, period } = getDashboardFilters();
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const last7 = new Date(today);
+  last7.setDate(today.getDate() - 6);
+  const last30 = new Date(today);
+  last30.setDate(today.getDate() - 29);
+  const last7Str = last7.toISOString().slice(0, 10);
+  const last30Str = last30.toISOString().slice(0, 10);
+  const currentMonthStr = todayStr.slice(0, 7);
+  const currentYearStr = todayStr.slice(0, 4);
+
+  return (rows || []).filter((r) => {
+    const date = r.data || (r.created_at ? r.created_at.slice(0, 10) : "");
+    if (!date) return false;
+    if (ano && String(r.ano) !== ano) return false;
+    if (turma && String(r.turma || r.alunos?.turma || "") !== turma) return false;
+    if (month && !date.startsWith(month)) return false;
+
+    if (period === "today" && date !== todayStr) return false;
+    if (period === "thisMonth" && !date.startsWith(currentMonthStr)) return false;
+    if (period === "thisYear" && !date.startsWith(currentYearStr)) return false;
+    if (period === "last7" && date < last7Str) return false;
+    if (period === "last30" && date < last30Str) return false;
+    return true;
+  });
+}
+
+function updateDashboardFilters(rows) {
+  const anoSelect = document.getElementById("dashboard-filter-ano");
+  const turmaSelect = document.getElementById("dashboard-filter-turma");
+  const monthSelect = document.getElementById("dashboard-filter-month");
+  if (!anoSelect || !turmaSelect || !monthSelect) return;
+
+  const anos = new Set();
+  const turmas = new Set();
+  const meses = new Set();
+  rows.forEach((r) => {
+    if (r.ano != null && r.ano !== "") anos.add(String(r.ano));
+    const turma = String(r.turma || r.alunos?.turma || "").trim();
+    if (turma) turmas.add(turma);
+    const date = r.data || (r.created_at ? r.created_at.slice(0, 10) : "");
+    if (date) meses.add(date.slice(0, 7));
+  });
+
+  const selectedAno = anoSelect.value;
+  const selectedTurma = turmaSelect.value;
+  const selectedMonth = monthSelect.value;
+
+  anoSelect.innerHTML =
+    "<option value=''>Todos os anos</option>" +
+    [...anos]
+      .sort((a, b) => Number(a) - Number(b))
+      .map((value) => `<option value="${value}">${value}º ano</option>`)
+      .join("");
+  turmaSelect.innerHTML =
+    "<option value=''>Todas as turmas</option>" +
+    [...turmas]
+      .sort((a, b) => a.localeCompare(b, "pt", { sensitivity: "base" }))
+      .map((value) => `<option value="${value}">${value}</option>`)
+      .join("");
+  monthSelect.innerHTML =
+    "<option value=''>Todos os meses</option>" +
+    [...meses]
+      .sort()
+      .map((value) => `<option value="${value}">${formatMonthLabel(value)}</option>`)
+      .join("");
+
+  if (selectedAno && [...anos].includes(selectedAno)) anoSelect.value = selectedAno;
+  if (selectedTurma && [...turmas].includes(selectedTurma)) turmaSelect.value = selectedTurma;
+  if (selectedMonth && [...meses].includes(selectedMonth)) monthSelect.value = selectedMonth;
+}
+
+function renderDashboard(rows) {
+  const filteredRows = applyDashboardFilters(rows);
+  updateMetrics(filteredRows);
+  renderChart(filteredRows);
+}
+
 // Calculate and show metrics on dashboard
 function updateMetrics(rows) {
   const todayEl = document.getElementById("metric-today");
@@ -408,13 +518,17 @@ async function carregarOcorrencias(q = "") {
       .map((p) => ({ ...p, _local: true }))
       .concat(data || []);
 
+    dashboardRows = rows;
+    updateDashboardFilters(rows);
+    const displayRows = applyDashboardFilters(rows);
+
     if (!rows.length) {
       listEl.innerHTML = `
         <div style="text-align: center; color: var(--text-muted); padding: 30px; font-size: 14px;">
           Nenhuma ocorrência encontrada.
         </div>`;
     } else {
-      listEl.innerHTML = rows
+      listEl.innerHTML = displayRows
         .map((r) => {
           const nome = r.alunos?.nome || r.aluno_nome || "";
           const dataVal =
@@ -431,8 +545,8 @@ async function carregarOcorrencias(q = "") {
 
           return `
             <div class="ocorrencia-item">
-              <div class="ocorrencia-header">
-                <div class="ocorrencia-student">${nome}</div>
+  updateMetrics(displayRows);
+  renderChart(displayRows);
                 <span class="${badgeClass}">${badgeText}</span>
               </div>
               <div class="ocorrencia-meta">
@@ -554,6 +668,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 300);
     });
   }
+
+  [
+    "dashboard-filter-ano",
+    "dashboard-filter-turma",
+    "dashboard-filter-month",
+    "dashboard-filter-period",
+  ].forEach((filterId) => {
+    const filterEl = document.getElementById(filterId);
+    if (filterEl) {
+      filterEl.addEventListener("change", () => {
+        if (ocorrenciasListEl) {
+          const searchQuery = search?.value.trim() || "";
+          carregarOcorrencias(searchQuery);
+        } else {
+          renderDashboard(dashboardRows);
+        }
+      });
+    }
+  });
 
   // Load occurrences and check pending syncs
   if (ocorrenciasListEl) {
