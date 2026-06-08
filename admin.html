@@ -116,6 +116,11 @@
           <!-- Importar Alunos Card -->
           <div class="app-card">
             <h3 class="app-card-title">Importar Alunos (CSV)</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+              O ficheiro deve ter um cabeçalho com as colunas:
+              <strong>Nome do aluno, Ano, Turma, Ciclo, Director de Turma</strong>.
+              O importador usa Nome do aluno, Ano e Turma; as colunas Ciclo e Director de Turma são apenas para referência.
+            </p>
             <div class="form-group">
               <label for="csvFile">Ficheiro CSV de Alunos</label>
               <input
@@ -139,6 +144,20 @@
           <!-- Turmas Existentes Card -->
           <div class="app-card">
             <h3 class="app-card-title">Turmas Existentes</h3>
+            <div class="form-group">
+              <label for="turmasAnoFiltro">Filtrar por Ano</label>
+              <select id="turmasAnoFiltro" class="form-control">
+                <option value="">Todos os anos</option>
+                <option value="5">5º ano</option>
+                <option value="6">6º ano</option>
+                <option value="7">7º ano</option>
+                <option value="8">8º ano</option>
+                <option value="9">9º ano</option>
+                <option value="10">10º ano</option>
+                <option value="11">11º ano</option>
+                <option value="12">12º ano</option>
+              </select>
+            </div>
             <div id="turmasList" class="admin-list-container" style="max-height: 320px;">
               <div class="admin-list-item" style="color: var(--text-muted);">
                 A carregar turmas...
@@ -153,5 +172,8 @@
     <!-- We also import app.js to get signOut functionality -->
     <script src="js/app.js"></script>
     <script src="js/admin.js"></script>
+    <footer style="padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px;">
+      made by antonio.appleton | Departamento de Programação
+    </footer>
   </body>
 </html>

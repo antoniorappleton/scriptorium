@@ -14,6 +14,135 @@ async function registarOcorrencia(dados) {
   }
 }
 
+let registarTurmasCache = [];
+let registarCiclosCache = [];
+
+async function loadRegistarCiclos() {
+  const select = document.getElementById("ciclo");
+  if (!select) return;
+  select.innerHTML = '<option value="">A carregar ciclos...</option>';
+  const { data, error } = await window.supabase.from("ciclos").select("*").order("nome");
+  if (error) {
+    console.error("Erro ao carregar ciclos", error);
+    select.innerHTML = '<option value="">Erro a carregar ciclos</option>';
+    return;
+  }
+  registarCiclosCache = data || [];
+  select.innerHTML =
+    '<option value="">Todos os ciclos</option>' +
+    registarCiclosCache
+      .map((c) => `<option value="${c.id}">${c.nome}</option>`)
+      .join("");
+}
+
+async function loadRegistarTurmas() {
+  const { data, error } = await window.supabase
+    .from("turmas")
+    .select("*, ciclos(*)")
+    .order("nome");
+  if (error) {
+    console.error("Erro ao carregar turmas", error);
+    registarTurmasCache = [];
+    return;
+  }
+  registarTurmasCache = data || [];
+}
+
+function getRegistarAvailableYears(selectedCicloId) {
+  return Array.from(
+    new Set(
+      registarTurmasCache
+        .filter((t) => !selectedCicloId || String(t.ciclo_id) === selectedCicloId)
+        .map((t) => Number(t.ano))
+        .filter((ano) => Number.isFinite(ano)),
+    ),
+  ).sort((a, b) => a - b);
+}
+
+function getRegistarFilteredTurmas(selectedCicloId, selectedAno) {
+  return registarTurmasCache.filter((t) => {
+    if (selectedCicloId && String(t.ciclo_id) !== selectedCicloId) return false;
+    if (selectedAno && String(t.ano) !== selectedAno) return false;
+    return true;
+  });
+}
+
+function updateRegistarAnoOptions() {
+  const cicloEl = document.getElementById("ciclo");
+  const anoEl = document.getElementById("ano");
+  if (!anoEl) return;
+  const selectedCycle = cicloEl?.value || "";
+  const years = getRegistarAvailableYears(selectedCycle);
+  const currentValue = anoEl.value;
+
+  if (!years.length) {
+    anoEl.innerHTML = '<option value="">Nenhum ano disponível</option>';
+    anoEl.disabled = true;
+    return;
+  }
+
+  anoEl.disabled = false;
+  anoEl.innerHTML =
+    '<option value="">Selecione um ano</option>' +
+    years.map((ano) => `<option value="${ano}">${ano}º ano</option>`).join("");
+  if (currentValue && years.includes(Number(currentValue))) {
+    anoEl.value = currentValue;
+  }
+}
+
+function updateRegistarTurmaOptions() {
+  const cicloEl = document.getElementById("ciclo");
+  const anoEl = document.getElementById("ano");
+  const turmaEl = document.getElementById("turma");
+  if (!turmaEl) return;
+  const selectedCycle = cicloEl?.value || "";
+  const selectedAno = anoEl?.value || "";
+  const turmas = getRegistarFilteredTurmas(selectedCycle, selectedAno);
+  const currentValue = turmaEl.value;
+
+  if (!turmas.length) {
+    turmaEl.innerHTML =
+      `<option value="">${
+        selectedAno ? "Nenhuma turma encontrada" : "Sem turmas disponíveis"
+      }</option>`;
+    turmaEl.disabled = true;
+    return;
+  }
+
+  turmaEl.disabled = false;
+  turmaEl.innerHTML =
+    '<option value="">Selecione uma turma</option>' +
+    turmas
+      .map(
+        (t) =>
+          `<option value="${t.nome}">${t.nome} (${t.ano}º${
+            t.ciclos?.nome ? " - " + t.ciclos.nome : ""
+          })</option>`,
+      )
+      .join("");
+  if (currentValue && turmas.some((t) => t.nome === currentValue)) {
+    turmaEl.value = currentValue;
+  }
+}
+
+async function initRegistarFilters() {
+  await Promise.all([loadRegistarCiclos(), loadRegistarTurmas()]);
+  updateRegistarAnoOptions();
+  updateRegistarTurmaOptions();
+
+  const cicloEl = document.getElementById("ciclo");
+  const anoEl = document.getElementById("ano");
+  if (cicloEl) {
+    cicloEl.addEventListener("change", () => {
+      updateRegistarAnoOptions();
+      updateRegistarTurmaOptions();
+    });
+  }
+  if (anoEl) {
+    anoEl.addEventListener("change", updateRegistarTurmaOptions);
+  }
+}
+
 async function sincronizarPendentes() {
   const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
   if (!pendentes.length) return alert("Nenhum registo pendente.");
@@ -370,6 +499,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (form) {
     const dataInput = document.getElementById("data");
     if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
+    await initRegistarFilters();
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const alunoNomeEl = document.getElementById("alunoNome");
