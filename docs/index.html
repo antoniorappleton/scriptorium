@@ -129,64 +129,18 @@
             </div>
           </div>
 
-          <!-- Admin Panel (Conditional) -->
-          <div class="app-card" id="adminPanel" style="display: none;">
-            <h3 class="app-card-title">Registar Aluno (Rápido)</h3>
-            <form id="addAlunoForm" style="box-shadow: none; padding: 0;">
-              <div class="form-group">
-                <label for="alunoNomeAdmin">Nome do Aluno</label>
-                <input
-                  placeholder="Nome Completo"
-                  id="alunoNomeAdmin"
-                  class="form-control"
-                  required
-                />
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="alunoAnoAdmin">Ano</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="12"
-                    placeholder="Ex: 8"
-                    id="alunoAnoAdmin"
-                    class="form-control"
-                  />
-                </div>
-                <div class="form-group">
-                  <label for="alunoTurmaAdmin">Turma</label>
-                  <input
-                    placeholder="Ex: A"
-                    id="alunoTurmaAdmin"
-                    class="form-control"
-                  />
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="alunoCicloAdmin">Ciclo</label>
-                <input
-                  placeholder="Ex: C3"
-                  id="alunoCicloAdmin"
-                  class="form-control"
-                />
-              </div>
-              <button
-                type="submit"
-                class="btn btn-primary"
-                style="width: 100%; margin-top: 8px;"
-              >
-                Adicionar Aluno
+          <div class="app-card">
+            <h3 class="app-card-title">Relatórios</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+              Exportar dados para análise offline e partilha.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <button id="downloadOcorrenciasReport" class="btn btn-secondary">
+                📄 Download de Ocorrências (CSV)
               </button>
-            </form>
-
-            <div style="margin-top: 24px;">
-              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted);">
-                Alunos Criados Recentemente
-              </h4>
-              <div id="alunosList" class="admin-list-container">
-                <div class="admin-list-item" style="color: var(--text-muted);">Sem alunos.</div>
-              </div>
+              <button id="downloadMetricasReport" class="btn btn-secondary">
+                📊 Download de Métricas (CSV)
+              </button>
             </div>
           </div>
         </div>
@@ -210,8 +164,9 @@
                 .select("role")
                 .eq("email", email)
                 .maybeSingle();
-              if (prof?.role === "admin") {
-                window.location.href = "admin.html";
+              // Admin users may still want to access the dashboard.
+              if (prof?.role !== "admin") {
+                // no extra redirect needed for regular users.
               }
             } catch (e) {
               console.warn("Role check failed", e);
@@ -255,5 +210,8 @@
           .catch(console.error);
       }
     </script>
+    <footer style="padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px;">
+      made by antonio.appleton | Departamento de Programação
+    </footer>
   </body>
 </html>
