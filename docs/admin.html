@@ -141,6 +141,40 @@
             <div id="importStatus" style="margin-top: 16px;"></div>
           </div>
 
+          <!-- Atualizar Password do Utilizador -->
+          <div class="app-card">
+            <h3 class="app-card-title">Atualizar Password</h3>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+              Atualize a password do utilizador <strong>scriptorium@colegio-ramalhao.com</strong> diretamente como administrador.
+            </p>
+            <div class="form-group">
+              <label for="updateUserEmail">Email do utilizador</label>
+              <input
+                id="updateUserEmail"
+                class="form-control"
+                value="scriptorium@colegio-ramalhao.com"
+                disabled
+              />
+            </div>
+            <div class="form-group">
+              <label for="updateUserPassword">Nova password</label>
+              <input
+                id="updateUserPassword"
+                type="password"
+                class="form-control"
+                placeholder="Defina a nova password"
+              />
+            </div>
+            <button
+              id="updatePasswordBtn"
+              class="btn btn-secondary"
+              style="width: 100%; margin-top: 8px;"
+            >
+              Atualizar Password
+            </button>
+            <div id="updatePasswordStatus" style="margin-top: 16px;"></div>
+          </div>
+
           <!-- Turmas Existentes Card -->
           <div class="app-card">
             <h3 class="app-card-title">Turmas Existentes</h3>
