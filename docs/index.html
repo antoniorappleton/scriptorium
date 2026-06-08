@@ -199,8 +199,23 @@
         if (window.supabaseReady) await window.supabaseReady;
         try {
           const { data } = await window.supabase.auth.getSession();
-          if (!data?.session) {
+          const session = data?.session;
+          if (!session) {
             window.location.href = "login.html";
+          } else {
+            try {
+              const email = session.user.email;
+              const { data: prof } = await window.supabase
+                .from("professores")
+                .select("role")
+                .eq("email", email)
+                .maybeSingle();
+              if (prof?.role === "admin") {
+                window.location.href = "admin.html";
+              }
+            } catch (e) {
+              console.warn("Role check failed", e);
+            }
           }
         } catch (e) {
           console.error("Auth check failed", e);

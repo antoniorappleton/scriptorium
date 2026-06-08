@@ -67,10 +67,25 @@
       (async () => {
         if (window.supabaseReady) await window.supabaseReady;
 
-        // If already logged in, go to dashboard
+        // If already logged in, redirect according to role
         try {
           const { data } = await window.supabase.auth.getSession();
-          if (data?.session) {
+          const session = data?.session;
+          if (session) {
+            try {
+              const email = session.user.email;
+              const { data: prof } = await window.supabase
+                .from("professores")
+                .select("role")
+                .eq("email", email)
+                .maybeSingle();
+              if (prof?.role === "admin") {
+                window.location.href = "admin.html";
+                return;
+              }
+            } catch (e) {
+              console.warn("Role check failed", e);
+            }
             window.location.href = "index.html";
             return;
           }
@@ -136,7 +151,26 @@
             submitBtn.textContent = "Entrar";
             return;
           }
-          // Successful login
+          // Successful login: redirect admins to admin screen
+          try {
+            const session =
+              data?.session ||
+              (await window.supabase.auth.getSession()).data.session;
+            const userEmail = session?.user?.email;
+            if (userEmail) {
+              const { data: prof } = await window.supabase
+                .from("professores")
+                .select("role")
+                .eq("email", userEmail)
+                .maybeSingle();
+              if (prof?.role === "admin") {
+                window.location.href = "admin.html";
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("Post-login role check failed", e);
+          }
           window.location.href = "index.html";
         });
 
