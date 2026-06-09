@@ -1,4 +1,4 @@
-const CACHE_NAME = "scriptorium-v3";
+const CACHE_NAME = "scriptorium-v5";
 const PRECACHE = [
   "./",
   "index.html",
@@ -14,8 +14,9 @@ const PRECACHE = [
   "assets/logo.svg",
   "assets/Scriptorium.jpg",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js",
-  "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js",
-  "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js",
+  "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap",
 ];
 
 self.addEventListener("install", (event) => {

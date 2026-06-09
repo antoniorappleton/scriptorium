@@ -11,15 +11,13 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   </head>
   <body>
     <header class="app-header">
       <a href="index.html" class="brand">
-        <img
-          src="assets/logo.png"
-          alt="Scriptorium Logo"
-          class="brand-logo"
-        />
+        <img src="assets/logo.png" alt="Scriptorium Logo" class="brand-logo" />
         <div class="brand-text">
           <h1>SCRIPTORIUM</h1>
           <div class="tag">Portal Académico</div>
@@ -28,13 +26,14 @@
       <nav class="nav-menu">
         <a href="index.html" class="active">Dashboard</a>
         <a href="registar.html">Registar Ocorrência</a>
-        <a href="admin.html" id="adminNavLink" style="display: none;">Administração</a>
+        <a href="admin.html" id="adminNavLink" style="display: none"
+          >Administração</a
+        >
         <button id="signOutBtn">Sair</button>
       </nav>
     </header>
 
     <script>
-      // wire sign out button when header loads
       document.addEventListener("DOMContentLoaded", () => {
         const btn = document.getElementById("signOutBtn");
         if (btn) {
@@ -65,12 +64,11 @@
 
       <!-- Dashboard Grid Layout -->
       <div class="dashboard-grid">
-        <!-- Left Column: Stats & Chart -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 24px">
           <!-- Overview Card -->
           <div class="app-card">
             <h3 class="app-card-title">Visão Geral</h3>
-            <div class="form-row" style="margin-bottom: 18px; gap: 12px;">
+            <div class="form-row" style="margin-bottom: 18px; gap: 12px">
               <div class="form-group">
                 <label for="dashboard-filter-ano">Ano</label>
                 <select id="dashboard-filter-ano" class="form-control">
@@ -119,10 +117,12 @@
                 <div class="metric-value" id="metric-students">--</div>
               </div>
             </div>
-            
+
             <div class="action-bar">
-              <a href="registar.html" class="btn btn-primary">➕ Registar Ocorrência</a>
-              <button id="syncBtn" class="btn btn-sync" style="display: none;">
+              <a href="registar.html" class="btn btn-primary"
+                >➕ Registar Ocorrência</a
+              >
+              <button id="syncBtn" class="btn btn-sync" style="display: none">
                 🔄 Sincronizar Pendentes
               </button>
             </div>
@@ -132,7 +132,15 @@
           <div class="app-card">
             <h3 class="app-card-title">Estatísticas Semanais</h3>
             <div class="chart-container" id="chartWrapper">
-              <div id="chartPlaceholder" style="text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 60px;">
+              <div
+                id="chartPlaceholder"
+                style="
+                  text-align: center;
+                  color: var(--text-muted);
+                  font-size: 14px;
+                  margin-top: 60px;
+                "
+              >
                 A carregar dados do gráfico...
               </div>
             </div>
@@ -144,7 +152,7 @@
           <!-- Recent Occurrences -->
           <div class="app-card">
             <h3 class="app-card-title">Ocorrências Recentes</h3>
-            <div class="search-wrapper" style="margin-bottom: 16px;">
+            <div class="search-wrapper" style="margin-bottom: 16px">
               <span class="search-icon">🔍</span>
               <input
                 id="search"
@@ -154,7 +162,13 @@
               />
             </div>
             <div id="ocorrenciasList" class="ocorrencias-list">
-              <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+              <div
+                style="
+                  text-align: center;
+                  color: var(--text-muted);
+                  padding: 20px;
+                "
+              >
                 A carregar ocorrências...
               </div>
             </div>
@@ -162,17 +176,62 @@
 
           <div class="app-card">
             <h3 class="app-card-title">Relatórios</h3>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
-              Exportar dados para análise offline e partilha.
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 13px;
+                margin-bottom: 12px;
+              "
+            >
+              Exportar ocorrências para PDF. Selecione filtros e período.
             </p>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-              <button id="downloadOcorrenciasReport" class="btn btn-secondary">
-                📄 Download de Ocorrências (CSV)
-              </button>
-              <button id="downloadMetricasReport" class="btn btn-secondary">
-                📊 Download de Métricas (CSV)
-              </button>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1">
+                <label for="reportCiclo">Ciclo</label>
+                <select id="reportCiclo" class="form-control">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div class="form-group" style="width: 120px">
+                <label for="reportAno">Ano</label>
+                <select id="reportAno" class="form-control">
+                  <option value="">Todos</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1">
+                <label for="reportTurma">Turma</label>
+                <select id="reportTurma" class="form-control">
+                  <option value="">Todas</option>
+                </select>
+              </div>
             </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="reportStart">Data Início</label>
+                <input id="reportStart" type="date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="reportEnd">Data Fim</label>
+                <input id="reportEnd" type="date" class="form-control" />
+              </div>
+            </div>
+            <button
+              id="downloadOcorrenciasReport"
+              class="btn btn-primary"
+              style="width: 100%; margin-top: 8px"
+            >
+              Exportar PDF
+            </button>
+            <div id="reportStatusDashboard" style="margin-top: 12px"></div>
           </div>
         </div>
       </div>
@@ -241,7 +300,14 @@
           .catch(console.error);
       }
     </script>
-    <footer style="padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px;">
+    <footer
+      style="
+        padding: 14px 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      "
+    >
       made by antonio.appleton | Departamento de Programação
     </footer>
   </body>
