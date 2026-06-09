@@ -544,7 +544,72 @@ function updateDashboardFilters(rows) {
 function renderDashboard(rows) {
   const filteredRows = applyDashboardFilters(rows);
   updateMetrics(filteredRows);
+  renderFrequentStudents(filteredRows);
   renderChart(filteredRows);
+}
+
+function getStudentKey(row) {
+  return (
+    row.aluno_id ||
+    row.alunos?.id ||
+    String(row.alunos?.nome || row.aluno_nome || "").trim().toLowerCase()
+  );
+}
+
+function renderFrequentStudents(rows) {
+  const listEl = document.getElementById("frequentStudentsList");
+  if (!listEl) return;
+
+  const grouped = new Map();
+  (rows || []).forEach((row) => {
+    const nome = String(row.alunos?.nome || row.aluno_nome || "").trim();
+    if (!nome) return;
+    const key = getStudentKey(row);
+    if (!key) return;
+    const current = grouped.get(key) || {
+      nome,
+      ano: row.ano || row.alunos?.ano || "",
+      turma: row.turma || row.alunos?.turma || "",
+      count: 0,
+    };
+    current.count += 1;
+    if (!current.ano && (row.ano || row.alunos?.ano)) {
+      current.ano = row.ano || row.alunos?.ano;
+    }
+    if (!current.turma && (row.turma || row.alunos?.turma)) {
+      current.turma = row.turma || row.alunos?.turma;
+    }
+    grouped.set(key, current);
+  });
+
+  const students = [...grouped.values()]
+    .filter((student) => student.count >= 3)
+    .sort((a, b) => b.count - a.count || a.nome.localeCompare(b.nome, "pt"));
+
+  if (!students.length) {
+    listEl.innerHTML =
+      "<div class='admin-list-item' style='color: var(--text-muted);'>Nenhum aluno com 3 ou mais ocorrências nos filtros atuais.</div>";
+    return;
+  }
+
+  listEl.innerHTML = students
+    .map((student) => {
+      const anoTurma = `${student.ano ? student.ano + "º" : ""}${
+        student.turma ? " " + student.turma : ""
+      }`.trim();
+      return `<div class="admin-list-item">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <strong>${student.nome}</strong>
+          ${
+            anoTurma
+              ? `<span style="color: var(--text-muted); font-size: 11px;">${anoTurma}</span>`
+              : ""
+          }
+        </div>
+        <span class="badge badge-pending">${student.count} ocorrências</span>
+      </div>`;
+    })
+    .join("");
 }
 
 // Calculate and show metrics on dashboard
@@ -662,6 +727,7 @@ async function carregarOcorrencias(q = "") {
     }
 
     updateMetrics(displayRows);
+    renderFrequentStudents(displayRows);
     renderChart(displayRows);
   } catch (err) {
     console.error(err);
@@ -688,11 +754,14 @@ async function carregarOcorrencias(q = "") {
         })
         .join("");
 
-      updateMetrics(pendentes.map((p) => ({ ...p, _local: true })));
-      renderChart(pendentes.map((p) => ({ ...p, _local: true })));
+      const localRows = pendentes.map((p) => ({ ...p, _local: true }));
+      updateMetrics(localRows);
+      renderFrequentStudents(localRows);
+      renderChart(localRows);
     } else {
       listEl.innerHTML =
         "<div style='text-align: center; color: var(--error); padding: 20px;'>Erro ao carregar ocorrências.</div>";
+      renderFrequentStudents([]);
     }
   }
 }
