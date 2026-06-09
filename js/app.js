@@ -133,17 +133,26 @@ async function initRegistarFilters() {
   await Promise.all([loadRegistarCiclos(), loadRegistarTurmas()]);
   updateRegistarAnoOptions();
   updateRegistarTurmaOptions();
+  await loadAlunosForRegistar();
 
   const cicloEl = document.getElementById("ciclo");
   const anoEl = document.getElementById("ano");
+  const turmaEl = document.getElementById("turma");
   if (cicloEl) {
     cicloEl.addEventListener("change", () => {
       updateRegistarAnoOptions();
       updateRegistarTurmaOptions();
+      loadAlunosForRegistar();
     });
   }
   if (anoEl) {
-    anoEl.addEventListener("change", updateRegistarTurmaOptions);
+    anoEl.addEventListener("change", () => {
+      updateRegistarTurmaOptions();
+      loadAlunosForRegistar();
+    });
+  }
+  if (turmaEl) {
+    turmaEl.addEventListener("change", loadAlunosForRegistar);
   }
 }
 
@@ -182,51 +191,27 @@ function populateAlunosDatalist(items) {
 async function loadAlunosForRegistar() {
   const select = document.getElementById("alunoSelect");
   if (!select) return;
-  select.innerHTML = '<option value="">A carregar...</option>';
   const cicloId = document.getElementById("ciclo")?.value || null;
   const ano = document.getElementById("ano")?.value || null;
   const turma = document.getElementById("turma")?.value || null;
 
-  try {
-    let query;
-    if (turma) {
-      query = window.supabase
-        .from("alunos")
-        .select("id,nome,ano,turma")
-        .eq("turma", turma)
-        .order("nome");
-    } else if (ano) {
-      query = window.supabase
-        .from("alunos")
-        .select("id,nome,ano,turma")
-        .eq("ano", Number(ano))
-        .order("nome");
-    } else if (cicloId) {
-      // find turmas for ciclo
-      const { data: turmasData } = await window.supabase
-        .from("turmas")
-        .select("nome")
-        .eq("ciclo_id", cicloId);
-      const nomes = (turmasData || []).map((t) => t.nome);
-      if (nomes.length) {
-        query = window.supabase
-          .from("alunos")
-          .select("id,nome,ano,turma")
-          .in("turma", nomes)
-          .order("nome");
-      } else {
-        query = window.supabase
-          .from("alunos")
-          .select("id,nome,ano,turma")
-          .order("nome");
-      }
-    } else {
-      query = window.supabase
-        .from("alunos")
-        .select("id,nome,ano,turma")
-        .order("nome");
-    }
+  if (!cicloId || !ano || !turma) {
+    select.innerHTML =
+      '<option value="">Selecione ciclo, ano e turma primeiro</option>';
+    select.disabled = true;
+    return;
+  }
 
+  select.innerHTML = '<option value="">A carregar alunos...</option>';
+  select.disabled = true;
+
+  try {
+    const query = window.supabase
+      .from("alunos")
+      .select("id,nome,ano,turma")
+      .eq("ano", Number(ano))
+      .eq("turma", turma)
+      .order("nome");
     const { data, error } = await query;
     if (error) throw error;
     const items = data || [];
@@ -730,25 +715,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dataInput = document.getElementById("data");
     if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
     await initRegistarFilters();
-    // Autocomplete for alunoNome
-    const alunoNomeEl = document.getElementById("alunoNome");
-    const anoEl = document.getElementById("ano");
-    const turmaEl = document.getElementById("turma");
-    if (alunoNomeEl) {
-      const onInput = debounce(async () => {
-        const q = alunoNomeEl.value.trim();
-        const ano = anoEl?.value || null;
-        const turma = turmaEl?.value || null;
-        if (!q) return populateAlunosDatalist([]);
-        const items = await fetchAlunoSuggestions(q, ano, turma);
-        populateAlunosDatalist(items);
-      }, 250);
-      alunoNomeEl.addEventListener("input", onInput);
-      // when filters change, refresh suggestions for current input
-      if (anoEl) anoEl.addEventListener("change", onInput);
-      if (turmaEl) turmaEl.addEventListener("change", onInput);
-    }
-
     // Motivo presets
     const motivoSelect = document.getElementById("motivoSelect");
     const motivoTextarea = document.getElementById("motivo");
@@ -770,21 +736,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const alunoNomeEl = document.getElementById("alunoNome");
+      const alunoSelectEl = document.getElementById("alunoSelect");
       const anoEl = document.getElementById("ano");
       const turmaEl = document.getElementById("turma");
       const motivoEl = document.getElementById("motivo");
       const dataEl = document.getElementById("data");
       const submitBtn = form.querySelector("button[type=submit]");
+      const selectedAluno =
+        alunoSelectEl?.options[alunoSelectEl.selectedIndex] || null;
 
       const dados = {
-        aluno_nome: alunoNomeEl ? alunoNomeEl.value.trim() : "",
+        aluno_id: selectedAluno?.dataset?.id || null,
+        aluno_nome: alunoSelectEl ? alunoSelectEl.value.trim() : "",
         ano: anoEl ? Number(anoEl.value) : null,
         turma: turmaEl ? turmaEl.value.trim() : null,
         data: dataEl ? dataEl.value : new Date().toISOString().slice(0, 10),
         motivo: motivoEl ? motivoEl.value.trim() : "",
         created_at: new Date().toISOString(),
       };
+
+      if (!dados.aluno_id || !dados.aluno_nome) {
+        alert("Selecione um aluno da lista.");
+        return;
+      }
 
       if (submitBtn) {
         submitBtn.disabled = true;
@@ -849,18 +823,85 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Export occurrences (Dashboard) -> PDF
+  async function loadDashboardReportCiclos() {
+    const el = document.getElementById("reportCiclo");
+    if (!el) return;
+    el.innerHTML = '<option value="">A carregar...</option>';
+    const { data, error } = await window.supabase
+      .from("ciclos")
+      .select("*")
+      .order("nome");
+    if (error) {
+      el.innerHTML = '<option value="">Erro a carregar</option>';
+      return;
+    }
+    el.innerHTML =
+      '<option value="">Todos</option>' +
+      (data || [])
+        .map((c) => `<option value="${c.id}">${c.nome}</option>`)
+        .join("");
+  }
+
+  async function loadDashboardReportTurmas() {
+    const el = document.getElementById("reportTurma");
+    if (!el) return;
+    const cicloId = document.getElementById("reportCiclo")?.value || null;
+    const anoVal = document.getElementById("reportAno")?.value || null;
+    el.innerHTML = '<option value="">A carregar...</option>';
+    let query = window.supabase.from("turmas").select("*").order("nome");
+    if (cicloId) query = query.eq("ciclo_id", cicloId);
+    if (anoVal) query = query.eq("ano", Number(anoVal));
+    const { data, error } = await query;
+    if (error) {
+      el.innerHTML = '<option value="">Erro a carregar</option>';
+      return;
+    }
+    el.innerHTML =
+      '<option value="">Todas</option>' +
+      (data || [])
+        .map((t) => `<option value="${t.nome}">${t.nome}</option>`)
+        .join("");
+  }
+
   async function generateDashboardPDF() {
     const statusEl = document.getElementById("reportStatusDashboard");
     if (statusEl) {
+      statusEl.className = "alert alert-success";
       statusEl.style.display = "block";
       statusEl.textContent = "A gerar PDF...";
     }
 
+    const cicloId = document.getElementById("reportCiclo")?.value || null;
+    const ano = document.getElementById("reportAno")?.value || null;
+    const turma = document.getElementById("reportTurma")?.value || null;
+    const start = document.getElementById("reportStart")?.value || null;
+    const end = document.getElementById("reportEnd")?.value || null;
+
     try {
-      const rows = applyDashboardFilters(dashboardRows || []);
+      let query = window.supabase
+        .from("ocorrencias")
+        .select("*")
+        .order("data", { ascending: false });
+      if (ano) query = query.eq("ano", Number(ano));
+      if (turma) query = query.eq("turma", turma);
+      else if (cicloId) {
+        const { data: turmasData } = await window.supabase
+          .from("turmas")
+          .select("nome")
+          .eq("ciclo_id", cicloId);
+        const nomes = (turmasData || []).map((t) => t.nome);
+        if (nomes.length) query = query.in("turma", nomes);
+      }
+      if (start) query = query.gte("data", start);
+      if (end) query = query.lte("data", end);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const rows = data || [];
       const body = (rows || []).map((r) => [
         r.data || (r.created_at ? r.created_at.slice(0, 10) : ""),
-        r.alunos?.nome || r.aluno_nome || "",
+        r.aluno_nome || "",
         r.ano || "",
         r.turma || "",
         r.motivo || "",
@@ -890,13 +931,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       doc.text("Relatório de Ocorrências", 110, 60);
 
       // header with applied filters
-      const f = getDashboardFilters();
-      const header = `Ano: ${f.ano || "Todos"}  Turma: ${f.turma || "Todas"}  Período: ${f.period || "Todos"}`;
+      const cicloText = (() => {
+        if (!cicloId) return "Todos os ciclos";
+        const sel = document.getElementById("reportCiclo");
+        return sel?.selectedOptions?.[0]?.text || "";
+      })();
+      const header = `Ciclo: ${cicloText}  Ano: ${ano || "Todos"}  Turma: ${turma || "Todas"}`;
       doc.setFontSize(10);
       doc.text(header, 40, 100);
+      if (start || end) {
+        doc.text(
+          `Período: ${start || "início"} a ${end || "fim"}`,
+          40,
+          114,
+        );
+      }
 
       doc.autoTable({
-        startY: 120,
+        startY: start || end ? 134 : 120,
         head: [["Data", "Aluno", "Ano", "Turma", "Motivo"]],
         body,
         styles: { fontSize: 9, cellPadding: 4 },
@@ -906,27 +958,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       const filename = `relatorio_ocorrencias_${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(filename);
 
-      if (statusEl) statusEl.textContent = `PDF gerado: ${filename}`;
+      if (statusEl) {
+        statusEl.className = "alert alert-success";
+        statusEl.textContent = `PDF gerado: ${filename}`;
+      }
     } catch (err) {
       console.error("dashboard report error", err);
-      if (statusEl)
+      if (statusEl) {
+        statusEl.className = "alert alert-error";
         statusEl.textContent =
           "Erro ao gerar PDF: " + (err?.message || String(err));
+      }
       alert("Erro ao gerar PDF: " + (err?.message || String(err)));
     }
   }
 
   const downloadBtn = document.getElementById("downloadOcorrenciasReport");
   if (downloadBtn) {
-    // create a small status element next to the button if not present
-    let s = document.getElementById("reportStatusDashboard");
-    if (!s) {
-      s = document.createElement("div");
-      s.id = "reportStatusDashboard";
-      s.style.marginTop = "8px";
-      s.style.display = "none";
-      downloadBtn.parentNode.appendChild(s);
-    }
+    await loadDashboardReportCiclos();
+    const reportCicloEl = document.getElementById("reportCiclo");
+    const reportAnoEl = document.getElementById("reportAno");
+    if (reportCicloEl)
+      reportCicloEl.addEventListener("change", loadDashboardReportTurmas);
+    if (reportAnoEl)
+      reportAnoEl.addEventListener("change", loadDashboardReportTurmas);
+    await loadDashboardReportTurmas();
     downloadBtn.addEventListener("click", generateDashboardPDF);
   }
 
