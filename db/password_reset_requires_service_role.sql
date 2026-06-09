@@ -1,0 +1,17 @@
+-- Nota importante:
+-- Não existe uma permissão RLS/SQL segura que permita ao frontend com chave anon
+-- executar Supabase Auth Admin API para alterar a password de outro utilizador.
+--
+-- O erro "User not allowed" acontece porque:
+-- - window.supabase.auth.admin.updateUserById exige service_role;
+-- - a app web usa SUPABASE_KEY pública/anon;
+-- - a service_role nunca deve ser colocada em app/js/supabase.js.
+--
+-- Solução correta implementada neste repositório:
+-- 1) fazer deploy de supabase/functions/update-scriptorium-password;
+-- 2) guardar SUPABASE_SERVICE_ROLE_KEY como secret desse backend;
+-- 3) no backend, validar que o utilizador autenticado é admin em public.professores;
+-- 4) só então chamar auth.admin.updateUserById para scriptorium@colegio-ramalhao.com.
+--
+-- Este ficheiro fica como documentação operacional para evitar tentar resolver
+-- "User not allowed" expondo chaves privadas no frontend.

@@ -45,6 +45,16 @@ CREATE POLICY authenticated_insert_ocorrencias
     )
   );
 
+-- Allow authenticated professors (present in professores table) to delete ocorrencias
+DROP POLICY IF EXISTS authenticated_delete_ocorrencias ON public.ocorrencias;
+CREATE POLICY authenticated_delete_ocorrencias
+  ON public.ocorrencias FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.professores p WHERE p.email = public.current_user_email()
+    )
+  );
+
 -- Allow admins to manage alunos
 DROP POLICY IF EXISTS admins_manage_alunos ON public.alunos;
 CREATE POLICY admins_manage_alunos

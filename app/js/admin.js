@@ -1,4 +1,4 @@
-async function loadCiclos() {
+﻿async function loadCiclos() {
   const el = document.getElementById("turmaCiclo");
   if (!el) return;
   el.innerHTML = '<option value="">A carregar...</option>';
@@ -68,66 +68,32 @@ async function refreshTurmas() {
     .join("");
 }
 
-async function getUserByEmail(email) {
-  if (!window.supabase.auth?.admin) {
-    throw new Error("API de administração do Supabase não está disponível.");
-  }
-
-  let response;
-  try {
-    response = await window.supabase.auth.admin.listUsers({ search: email });
-  } catch (e) {
-    response = await window.supabase.auth.admin.listUsers();
-  }
-
-  if (response?.error) {
-    if (
-      response.error.message?.includes("not_admin") ||
-      response.error.message?.includes("User not allowed")
-    ) {
-      throw new Error(
-        "Esta página está a usar a chave pública do Supabase. Para alterar passwords é necessário um endpoint seguro com service_role.",
-      );
-    }
-    throw response.error;
-  }
-
-  const users = Array.isArray(response?.data?.users)
-    ? response.data.users
-    : Array.isArray(response?.data)
-      ? response.data
-      : [];
-  return users.find((u) => u.email === email) || null;
-}
-
 async function updateUserPasswordByEmail(email, password) {
-  const user = await getUserByEmail(email);
-  if (!user) {
-    throw new Error("Utilizador não encontrado: " + email);
+  if (email !== "scriptorium@colegio-ramalhao.com") {
+    throw new Error("Este painel so altera a password da conta Scriptorium.");
   }
 
-  if (!window.supabase.auth?.admin?.updateUserById) {
+  const { data, error } = await window.supabase.functions.invoke(
+    "update-scriptorium-password",
+    {
+      body: { password },
+    },
+  );
+  if (error) {
     throw new Error(
-      "A atualização de utilizador não está disponível na API Supabase atual.",
+      error.message ||
+        "Nao foi possivel chamar a Edge Function update-scriptorium-password.",
     );
   }
-
-  const { error } = await window.supabase.auth.admin.updateUserById(user.id, {
-    password,
-  });
-  if (error) {
-    if (
-      error.message?.includes("not_admin") ||
-      error.message?.includes("User not allowed")
-    ) {
-      throw new Error(
-        "Esta página está a usar a chave pública do Supabase. Para alterar passwords é necessário um endpoint seguro com service_role.",
-      );
-    }
-    throw error;
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+  if (!data?.ok) {
+    throw new Error("Resposta inesperada ao atualizar password.");
   }
   return true;
 }
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.supabaseReady) await window.supabaseReady;
@@ -153,9 +119,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Show a more informative alert during debugging
       const errMsg = profError
         ? profError.message || String(profError)
-        : "Sem permissão de admin";
+        : "Sem permissÃ£o de admin";
       alert(
-        "Acesso negado: Apenas administradores podem aceder a esta página.\n\nDetalhe: " +
+        "Acesso negado: Apenas administradores podem aceder a esta pÃ¡gina.\n\nDetalhe: " +
           errMsg,
       );
       window.location.href = "index.html";
@@ -179,7 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("createCiclo").addEventListener("click", async () => {
     const nome = document.getElementById("cicloNome").value.trim();
-    if (!nome) return alert("Nome do ciclo é obrigatório");
+    if (!nome) return alert("Nome do ciclo Ã© obrigatÃ³rio");
 
     const { error } = await window.supabase.from("ciclos").insert([{ nome }]);
     if (error) return alert("Erro a criar ciclo: " + error.message);
@@ -196,7 +162,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ano = Number(document.getElementById("turmaAno").value) || null;
     const ciclo_id = document.getElementById("turmaCiclo").value || null;
 
-    if (!nome) return alert("Nome da turma é obrigatório");
+    if (!nome) return alert("Nome da turma Ã© obrigatÃ³rio");
 
     const { error } = await window.supabase
       .from("turmas")
@@ -254,14 +220,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!pwd) return;
       if (pwd.type === "password") {
         pwd.type = "text";
-        togglePasswordBtn.textContent = "🙈";
+        togglePasswordBtn.textContent = "ðŸ™ˆ";
       } else {
         pwd.type = "password";
-        togglePasswordBtn.textContent = "👁️";
+        togglePasswordBtn.textContent = "ðŸ‘ï¸";
       }
     });
   }
-  // --- Colar lista de alunos (import rápido) ---
+  // --- Colar lista de alunos (import rÃ¡pido) ---
   async function loadCiclosForPaste() {
     const el = document.getElementById("pasteCiclo");
     if (!el) return;
@@ -319,7 +285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         .map((s) => s.trim())
         .filter(Boolean);
       if (!names.length)
-        return alert("Insira pelo menos um nome separado por vírgula.");
+        return alert("Insira pelo menos um nome separado por vÃ­rgula.");
       const anoVal = document.getElementById("pasteAno")?.value;
       const ano = anoVal ? Number(anoVal) : null;
       const turma = document.getElementById("pasteTurma")?.value || null;
@@ -341,7 +307,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (statusEl) {
           statusEl.className = "alert alert-success";
-          statusEl.textContent = `Importação concluída: ${rows.length} alunos inseridos.`;
+          statusEl.textContent = `ImportaÃ§Ã£o concluÃ­da: ${rows.length} alunos inseridos.`;
         }
         document.getElementById("pasteNames").value = "";
         await refreshTurmas();
@@ -357,7 +323,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // --- Relatórios: carregar selects e gerar PDF ---
+  // --- RelatÃ³rios: carregar selects e gerar PDF ---
   async function loadReportCiclos() {
     const el = document.getElementById("reportCiclo");
     if (!el) return;
@@ -476,7 +442,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         doc.setFontSize(18);
         doc.text("SCRIPTORIUM", 110, 40);
         doc.setFontSize(12);
-        doc.text("Relatório de Ocorrências", 110, 60);
+        doc.text("RelatÃ³rio de OcorrÃªncias", 110, 60);
         const cicloText = (() => {
           if (!cicloId) return "Todos os ciclos";
           const sel = document.getElementById("reportCiclo");
@@ -506,9 +472,63 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (statusEl) {
           statusEl.className = "alert alert-error";
           statusEl.textContent =
-            "Erro ao gerar relatório: " + (err?.message || String(err));
+            "Erro ao gerar relatÃ³rio: " + (err?.message || String(err));
         }
-        alert("Erro ao gerar relatório: " + (err?.message || String(err)));
+        alert("Erro ao gerar relatÃ³rio: " + (err?.message || String(err)));
+      }
+    });
+  }
+
+  const deleteOccurrencesBtn = document.getElementById("deleteOccurrencesBtn");
+  if (deleteOccurrencesBtn) {
+    deleteOccurrencesBtn.addEventListener("click", async () => {
+      const start = document.getElementById("deleteStart")?.value || null;
+      const end = document.getElementById("deleteEnd")?.value || null;
+      const statusEl = document.getElementById("deleteOccurrencesStatus");
+
+      if (!start || !end) {
+        alert("Defina a data de inÃ­cio e a data de fim.");
+        return;
+      }
+      if (start > end) {
+        alert("A data de inÃ­cio nÃ£o pode ser posterior Ã  data de fim.");
+        return;
+      }
+
+      const ok = confirm(
+        `Eliminar definitivamente todas as ocorrÃªncias entre ${start} e ${end}?`,
+      );
+      if (!ok) return;
+
+      if (statusEl) {
+        statusEl.className = "alert alert-success";
+        statusEl.style.display = "block";
+        statusEl.textContent = "A eliminar ocorrÃªncias...";
+      }
+      deleteOccurrencesBtn.disabled = true;
+
+      try {
+        const { count, error } = await window.supabase
+          .from("ocorrencias")
+          .delete({ count: "exact" })
+          .gte("data", start)
+          .lte("data", end);
+        if (error) throw error;
+
+        if (statusEl) {
+          statusEl.className = "alert alert-success";
+          statusEl.textContent = `${count ?? 0} ocorrÃªncia(s) eliminada(s).`;
+        }
+      } catch (err) {
+        console.error("Delete occurrences error", err);
+        if (statusEl) {
+          statusEl.className = "alert alert-error";
+          statusEl.textContent =
+            "Erro ao eliminar ocorrÃªncias: " + (err?.message || String(err));
+        }
+        alert("Erro ao eliminar ocorrÃªncias: " + (err?.message || String(err)));
+      } finally {
+        deleteOccurrencesBtn.disabled = false;
       }
     });
   }

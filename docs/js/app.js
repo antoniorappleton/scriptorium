@@ -430,6 +430,12 @@ function renderChart(rows) {
 
 let dashboardRows = [];
 
+function deleteOccurrenceIconSvg() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"></path>
+  </svg>`;
+}
+
 function formatMonthLabel(yearMonth) {
   const [year, month] = yearMonth.split("-");
   const monthNames = [
@@ -681,7 +687,7 @@ async function carregarOcorrencias(q = "") {
 
     const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
     const rows = pendentes
-      .map((p) => ({ ...p, _local: true }))
+      .map((p, index) => ({ ...p, _local: true, _pendingIndex: index }))
       .concat(data || []);
 
     dashboardRows = rows;
@@ -709,11 +715,26 @@ async function carregarOcorrencias(q = "") {
           const badgeText = r._local ? "Pendente" : "Sincronizado";
           const anoTurmaText = `${r.ano ? r.ano + "º" : ""}${r.turma ? " " + r.turma : ""}`;
 
+          const deleteAttrs = r._local
+            ? `data-local-index="${r._pendingIndex}"`
+            : `data-id="${r.id || ""}"`;
+
           return `
             <div class="ocorrencia-item">
               <div class="ocorrencia-header">
                 <div class="ocorrencia-student">${nome}</div>
-                <span class="${badgeClass}">${badgeText}</span>
+                <div class="ocorrencia-actions">
+                  <span class="${badgeClass}">${badgeText}</span>
+                  <button
+                    type="button"
+                    class="icon-btn danger delete-ocorrencia-btn"
+                    title="Eliminar ocorrência"
+                    aria-label="Eliminar ocorrência"
+                    ${deleteAttrs}
+                  >
+                    ${deleteOccurrenceIconSvg()}
+                  </button>
+                </div>
               </div>
               <div class="ocorrencia-meta">
                 <span>📅 ${formattedDate}</span>
@@ -734,7 +755,7 @@ async function carregarOcorrencias(q = "") {
     const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
     if (pendentes.length) {
       listEl.innerHTML = pendentes
-        .map((r) => {
+        .map((r, index) => {
           const formattedDate = r.data.split("-").reverse().join("/");
           const anoTurmaText = `${r.ano ? r.ano + "º" : ""}${r.turma ? " " + r.turma : ""}`;
 
@@ -742,7 +763,18 @@ async function carregarOcorrencias(q = "") {
             <div class="ocorrencia-item">
               <div class="ocorrencia-header">
                 <div class="ocorrencia-student">${r.aluno_nome}</div>
-                <span class="badge badge-pending">Pendente</span>
+                <div class="ocorrencia-actions">
+                  <span class="badge badge-pending">Pendente</span>
+                  <button
+                    type="button"
+                    class="icon-btn danger delete-ocorrencia-btn"
+                    title="Eliminar ocorrência"
+                    aria-label="Eliminar ocorrência"
+                    data-local-index="${index}"
+                  >
+                    ${deleteOccurrenceIconSvg()}
+                  </button>
+                </div>
               </div>
               <div class="ocorrencia-meta">
                 <span>📅 ${formattedDate}</span>
@@ -764,6 +796,37 @@ async function carregarOcorrencias(q = "") {
       renderFrequentStudents([]);
     }
   }
+}
+
+async function eliminarOcorrencia({ id, localIndex, searchQuery = "" }) {
+  if (localIndex !== null && localIndex !== undefined && localIndex !== "") {
+    const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
+    const index = Number(localIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= pendentes.length) {
+      alert("Não foi possível encontrar a ocorrência pendente.");
+      return;
+    }
+    pendentes.splice(index, 1);
+    localStorage.setItem("pendentes", JSON.stringify(pendentes));
+    checkPendingSync();
+    await carregarOcorrencias(searchQuery);
+    return;
+  }
+
+  if (!id) {
+    alert("Não foi possível identificar a ocorrência.");
+    return;
+  }
+
+  const { error } = await window.supabase
+    .from("ocorrencias")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    alert("Erro ao eliminar ocorrência: " + error.message);
+    return;
+  }
+  await carregarOcorrencias(searchQuery);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -909,6 +972,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       (data || [])
         .map((c) => `<option value="${c.id}">${c.nome}</option>`)
         .join("");
+  }
+
+  if (ocorrenciasListEl) {
+    ocorrenciasListEl.addEventListener("click", (event) => {
+      const btn = event.target.closest(".delete-ocorrencia-btn");
+      if (!btn) return;
+      window.setTimeout(async () => {
+        const ok = confirm("Eliminar esta ocorrência?");
+        if (!ok) return;
+        btn.disabled = true;
+        try {
+          await eliminarOcorrencia({
+            id: btn.dataset.id,
+            localIndex: btn.dataset.localIndex,
+            searchQuery: search?.value.trim() || "",
+          });
+        } finally {
+          if (btn.isConnected) btn.disabled = false;
+        }
+      }, 0);
+    });
   }
 
   async function loadDashboardReportTurmas() {
