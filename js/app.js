@@ -21,7 +21,10 @@ async function loadRegistarCiclos() {
   const select = document.getElementById("ciclo");
   if (!select) return;
   select.innerHTML = '<option value="">A carregar ciclos...</option>';
-  const { data, error } = await window.supabase.from("ciclos").select("*").order("nome");
+  const { data, error } = await window.supabase
+    .from("ciclos")
+    .select("*")
+    .order("nome");
   if (error) {
     console.error("Erro ao carregar ciclos", error);
     select.innerHTML = '<option value="">Erro a carregar ciclos</option>';
@@ -52,7 +55,9 @@ function getRegistarAvailableYears(selectedCicloId) {
   return Array.from(
     new Set(
       registarTurmasCache
-        .filter((t) => !selectedCicloId || String(t.ciclo_id) === selectedCicloId)
+        .filter(
+          (t) => !selectedCicloId || String(t.ciclo_id) === selectedCicloId,
+        )
         .map((t) => Number(t.ano))
         .filter((ano) => Number.isFinite(ano)),
     ),
@@ -101,10 +106,9 @@ function updateRegistarTurmaOptions() {
   const currentValue = turmaEl.value;
 
   if (!turmas.length) {
-    turmaEl.innerHTML =
-      `<option value="">${
-        selectedAno ? "Nenhuma turma encontrada" : "Sem turmas disponíveis"
-      }</option>`;
+    turmaEl.innerHTML = `<option value="">${
+      selectedAno ? "Nenhuma turma encontrada" : "Sem turmas disponíveis"
+    }</option>`;
     turmaEl.disabled = true;
     return;
   }
@@ -141,6 +145,37 @@ async function initRegistarFilters() {
   if (anoEl) {
     anoEl.addEventListener("change", updateRegistarTurmaOptions);
   }
+}
+
+// Autocomplete: fetch aluno suggestions filtered by nome, ano, turma
+function debounce(fn, wait) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), wait);
+  };
+}
+
+async function fetchAlunoSuggestions(q, ano, turma) {
+  if (!q) return [];
+  let query = window.supabase
+    .from("alunos")
+    .select("id,nome,ano,turma")
+    .ilike("nome", `%${q}%`)
+    .limit(30);
+  if (ano) query = query.eq("ano", Number(ano));
+  if (turma) query = query.eq("turma", turma);
+  const { data, error } = await query;
+  if (error) return [];
+  return data || [];
+}
+
+function populateAlunosDatalist(items) {
+  const dl = document.getElementById("alunosDatalist");
+  if (!dl) return;
+  dl.innerHTML = (items || [])
+    .map((i) => `<option value="${i.nome}"></option>`)
+    .join("");
 }
 
 async function sincronizarPendentes() {
@@ -384,11 +419,13 @@ function applyDashboardFilters(rows) {
     const date = r.data || (r.created_at ? r.created_at.slice(0, 10) : "");
     if (!date) return false;
     if (ano && String(r.ano) !== ano) return false;
-    if (turma && String(r.turma || r.alunos?.turma || "") !== turma) return false;
+    if (turma && String(r.turma || r.alunos?.turma || "") !== turma)
+      return false;
     if (month && !date.startsWith(month)) return false;
 
     if (period === "today" && date !== todayStr) return false;
-    if (period === "thisMonth" && !date.startsWith(currentMonthStr)) return false;
+    if (period === "thisMonth" && !date.startsWith(currentMonthStr))
+      return false;
     if (period === "thisYear" && !date.startsWith(currentYearStr)) return false;
     if (period === "last7" && date < last7Str) return false;
     if (period === "last30" && date < last30Str) return false;
@@ -433,12 +470,18 @@ function updateDashboardFilters(rows) {
     "<option value=''>Todos os meses</option>" +
     [...meses]
       .sort()
-      .map((value) => `<option value="${value}">${formatMonthLabel(value)}</option>`)
+      .map(
+        (value) =>
+          `<option value="${value}">${formatMonthLabel(value)}</option>`,
+      )
       .join("");
 
-  if (selectedAno && [...anos].includes(selectedAno)) anoSelect.value = selectedAno;
-  if (selectedTurma && [...turmas].includes(selectedTurma)) turmaSelect.value = selectedTurma;
-  if (selectedMonth && [...meses].includes(selectedMonth)) monthSelect.value = selectedMonth;
+  if (selectedAno && [...anos].includes(selectedAno))
+    anoSelect.value = selectedAno;
+  if (selectedTurma && [...turmas].includes(selectedTurma))
+    turmaSelect.value = selectedTurma;
+  if (selectedMonth && [...meses].includes(selectedMonth))
+    monthSelect.value = selectedMonth;
 }
 
 function renderDashboard(rows) {
@@ -561,8 +604,8 @@ async function carregarOcorrencias(q = "") {
         .join("");
     }
 
-      updateMetrics(displayRows);
-      renderChart(displayRows);
+    updateMetrics(displayRows);
+    renderChart(displayRows);
   } catch (err) {
     console.error(err);
     const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
@@ -615,6 +658,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dataInput = document.getElementById("data");
     if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
     await initRegistarFilters();
+    // Autocomplete for alunoNome
+    const alunoNomeEl = document.getElementById("alunoNome");
+    const anoEl = document.getElementById("ano");
+    const turmaEl = document.getElementById("turma");
+    if (alunoNomeEl) {
+      const onInput = debounce(async () => {
+        const q = alunoNomeEl.value.trim();
+        const ano = anoEl?.value || null;
+        const turma = turmaEl?.value || null;
+        if (!q) return populateAlunosDatalist([]);
+        const items = await fetchAlunoSuggestions(q, ano, turma);
+        populateAlunosDatalist(items);
+      }, 250);
+      alunoNomeEl.addEventListener("input", onInput);
+      // when filters change, refresh suggestions for current input
+      if (anoEl) anoEl.addEventListener("change", onInput);
+      if (turmaEl) turmaEl.addEventListener("change", onInput);
+    }
+
+    // Motivo presets
+    const motivoSelect = document.getElementById("motivoSelect");
+    const motivoTextarea = document.getElementById("motivo");
+    function updateMotivoFromSelect() {
+      if (!motivoSelect || !motivoTextarea) return;
+      const v = motivoSelect.value;
+      if (v === "Outro") {
+        motivoTextarea.value = "";
+        motivoTextarea.readOnly = false;
+        motivoTextarea.focus();
+      } else {
+        motivoTextarea.value = v;
+        motivoTextarea.readOnly = true;
+      }
+    }
+    if (motivoSelect) {
+      motivoSelect.addEventListener("change", updateMotivoFromSelect);
+      updateMotivoFromSelect();
+    }
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const alunoNomeEl = document.getElementById("alunoNome");

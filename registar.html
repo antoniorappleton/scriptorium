@@ -10,11 +10,7 @@
   <body>
     <header class="app-header">
       <a href="index.html" class="brand">
-        <img
-          src="assets/logo.png"
-          alt="Scriptorium Logo"
-          class="brand-logo"
-        />
+        <img src="assets/logo.png" alt="Scriptorium Logo" class="brand-logo" />
         <div class="brand-text">
           <h1>SCRIPTORIUM</h1>
           <div class="tag">Portal Académico</div>
@@ -23,7 +19,9 @@
       <nav class="nav-menu">
         <a href="index.html">Dashboard</a>
         <a href="registar.html" class="active">Registar Ocorrência</a>
-        <a href="admin.html" id="adminNavLink" style="display: none;">Administração</a>
+        <a href="admin.html" id="adminNavLink" style="display: none"
+          >Administração</a
+        >
         <button id="signOutBtn">Sair</button>
       </nav>
     </header>
@@ -42,20 +40,24 @@
     <main class="app-container">
       <div class="narrow-container">
         <div class="app-card">
-          <h2 class="app-card-title" style="margin-bottom: 24px;">Registar Nova Ocorrência</h2>
-          
-          <form id="ocorrenciaForm" style="box-shadow: none; padding: 0;">
+          <h2 class="app-card-title" style="margin-bottom: 24px">
+            Registar Nova Ocorrência
+          </h2>
+
+          <form id="ocorrenciaForm" style="box-shadow: none; padding: 0">
             <div class="form-group">
               <label for="alunoNome">Nome do Aluno</label>
               <input
                 type="text"
                 id="alunoNome"
+                list="alunosDatalist"
                 required
                 placeholder="Nome completo do aluno"
                 class="form-control"
               />
+              <datalist id="alunosDatalist"></datalist>
             </div>
-            
+
             <div class="form-row">
               <div class="form-group">
                 <label for="ciclo">Ciclo</label>
@@ -63,7 +65,7 @@
                   <option value="">A carregar ciclos...</option>
                 </select>
               </div>
-              
+
               <div class="form-group">
                 <label for="ano">Ano Escolar</label>
                 <select id="ano" class="form-control" required>
@@ -77,18 +79,23 @@
                 <option value="">Selecione primeiro o ano</option>
               </select>
             </div>
-            
+
             <div class="form-group">
               <label for="data">Data do Acontecimento</label>
-              <input
-                type="date"
-                id="data"
-                required
-                class="form-control"
-              />
+              <input type="date" id="data" required class="form-control" />
             </div>
-            
+
             <div class="form-group">
+              <label for="motivoSelect">Motivo</label>
+              <select id="motivoSelect" class="form-control">
+                <option value="Chegou atrasado">Chegou atrasado</option>
+                <option value="Comportamento desadequado">
+                  Comportamento desadequado
+                </option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group" id="motivoWrapper">
               <label for="motivo">Motivo / Descrição Detalhada</label>
               <textarea
                 id="motivo"
@@ -97,16 +104,12 @@
                 class="form-control"
               ></textarea>
             </div>
-            
-            <div style="display: flex; gap: 12px; margin-top: 28px;">
-              <button
-                type="submit"
-                class="btn btn-primary"
-                style="flex: 2;"
-              >
+
+            <div style="display: flex; gap: 12px; margin-top: 28px">
+              <button type="submit" class="btn btn-primary" style="flex: 2">
                 Gravar Ocorrência
               </button>
-              <a href="index.html" class="btn btn-secondary" style="flex: 1;">
+              <a href="index.html" class="btn btn-secondary" style="flex: 1">
                 Cancelar
               </a>
             </div>
@@ -139,7 +142,14 @@
         }
       })();
     </script>
-    <footer style="padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px;">
+    <footer
+      style="
+        padding: 14px 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      "
+    >
       made by antonio.appleton | Departamento de Programação
     </footer>
     <script src="js/app.js"></script>
