@@ -46,16 +46,10 @@
 
           <form id="ocorrenciaForm" style="box-shadow: none; padding: 0">
             <div class="form-group">
-              <label for="alunoNome">Nome do Aluno</label>
-              <input
-                type="text"
-                id="alunoNome"
-                list="alunosDatalist"
-                required
-                placeholder="Nome completo do aluno"
-                class="form-control"
-              />
-              <datalist id="alunosDatalist"></datalist>
+              <label for="alunoSelect">Nome do Aluno</label>
+              <select id="alunoSelect" required class="form-control">
+                <option value="">Selecione ciclo → ano → turma primeiro</option>
+              </select>
             </div>
 
             <div class="form-row">
