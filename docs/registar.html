@@ -50,10 +50,12 @@
               <input
                 type="text"
                 id="alunoNome"
+                list="alunosDatalist"
                 required
                 placeholder="Nome completo do aluno"
                 class="form-control"
               />
+              <datalist id="alunosDatalist"></datalist>
             </div>
             
             <div class="form-row">
@@ -87,6 +89,14 @@
             </div>
             
             <div class="form-group">
+              <label for="motivoSelect">Motivo</label>
+              <select id="motivoSelect" class="form-control">
+                <option value="Chegou atrasado">Chegou atrasado</option>
+                <option value="Comportamento desadequado">Comportamento desadequado</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group" id="motivoWrapper">
               <label for="motivo">Motivo / Descrição Detalhada</label>
               <textarea
                 id="motivo"
