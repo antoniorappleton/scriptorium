@@ -6,16 +6,11 @@
     <title>Admin — Scriptorium</title>
     <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   </head>
   <body>
     <header class="app-header">
       <a href="index.html" class="brand">
-        <img
-          src="assets/logo.png"
-          alt="Scriptorium Logo"
-          class="brand-logo"
-        />
+        <img src="assets/logo.png" alt="Scriptorium Logo" class="brand-logo" />
         <div class="brand-text">
           <h1>SCRIPTORIUM</h1>
           <div class="tag">Portal Académico</div>
@@ -41,18 +36,25 @@
     </script>
 
     <main class="app-container">
-      <div style="margin-bottom: 24px;">
-        <h2 style="font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-main);">
+      <div style="margin-bottom: 24px">
+        <h2
+          style="
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+          "
+        >
           Painel de Administração
         </h2>
-        <p style="color: var(--text-muted); font-size: 14px;">
+        <p style="color: var(--text-muted); font-size: 14px">
           Faça a gestão dos ciclos, turmas e carregamento de listas de alunos.
         </p>
       </div>
 
       <div class="dashboard-grid">
         <!-- Left Column: Forms -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 24px">
           <!-- Criar Ciclo Card -->
           <div class="app-card">
             <h3 class="app-card-title">Criar Ciclo de Ensino</h3>
@@ -67,7 +69,7 @@
             <button
               id="createCiclo"
               class="btn btn-primary"
-              style="width: 100%; margin-top: 8px;"
+              style="width: 100%; margin-top: 8px"
             >
               Criar Ciclo
             </button>
@@ -104,7 +106,7 @@
             <button
               id="createTurma"
               class="btn btn-primary"
-              style="width: 100%; margin-top: 8px;"
+              style="width: 100%; margin-top: 8px"
             >
               Criar Turma
             </button>
@@ -112,40 +114,81 @@
         </div>
 
         <!-- Right Column: CSV & Lists -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
-          <!-- Importar Alunos Card -->
+        <div style="display: flex; flex-direction: column; gap: 24px">
+          <!-- Colar Lista de Alunos -->
           <div class="app-card">
-            <h3 class="app-card-title">Importar Alunos (CSV)</h3>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-              O ficheiro deve ter um cabeçalho com as colunas:
-              <strong>Nome do aluno, Ano, Turma, Ciclo, Director de Turma</strong>.
-              O importador usa Nome do aluno, Ano e Turma; as colunas Ciclo e Director de Turma são apenas para referência.
+            <h3 class="app-card-title">Colar Lista de Alunos</h3>
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 13px;
+                margin-bottom: 12px;
+              "
+            >
+              Cole aqui os nomes dos alunos separados por vírgula. Selecione o
+              ciclo, ano e turma antes de importar.
             </p>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1">
+                <label for="pasteCiclo">Ciclo</label>
+                <select id="pasteCiclo" class="form-control">
+                  <option value="">A carregar ciclos...</option>
+                </select>
+              </div>
+              <div class="form-group" style="width: 120px">
+                <label for="pasteAno">Ano</label>
+                <select id="pasteAno" class="form-control">
+                  <option value="">--</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1">
+                <label for="pasteTurma">Turma</label>
+                <select id="pasteTurma" class="form-control">
+                  <option value="">-- selecionar turma --</option>
+                </select>
+              </div>
+            </div>
+
             <div class="form-group">
-              <label for="csvFile">Ficheiro CSV de Alunos</label>
-              <input
-                type="file"
-                id="csvFile"
-                accept=".csv"
+              <label for="pasteNames">Nomes (separados por vírgula)</label>
+              <textarea
+                id="pasteNames"
                 class="form-control"
-                style="padding: 8px;"
-              />
+                rows="4"
+                placeholder="Ex: João Silva, Maria Costa, Ana Pereira"
+              ></textarea>
             </div>
             <button
-              id="importCsv"
+              id="pasteImportBtn"
               class="btn btn-primary"
-              style="width: 100%; margin-top: 8px;"
+              style="width: 100%; margin-top: 8px"
             >
-              Importar Alunos
+              Importar Colados
             </button>
-            <div id="importStatus" style="margin-top: 16px;"></div>
+            <div id="pasteImportStatus" style="margin-top: 16px"></div>
           </div>
 
           <!-- Atualizar Password do Utilizador -->
           <div class="app-card">
             <h3 class="app-card-title">Atualizar Password</h3>
-            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-              Atualize a password do utilizador <strong>scriptorium@colegio-ramalhao.com</strong> diretamente como administrador.
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 13px;
+                margin-bottom: 12px;
+              "
+            >
+              Atualize a password do utilizador
+              <strong>scriptorium@colegio-ramalhao.com</strong> diretamente como
+              administrador.
             </p>
             <div class="form-group">
               <label for="updateUserEmail">Email do utilizador</label>
@@ -158,25 +201,33 @@
             </div>
             <div class="form-group">
               <label for="updateUserPassword">Nova password</label>
-              <div style="display:flex;gap:8px;align-items:center;">
+              <div style="display: flex; gap: 8px; align-items: center">
                 <input
                   id="updateUserPassword"
                   type="password"
                   class="form-control"
                   placeholder="Defina a nova password"
-                  style="flex:1;"
+                  style="flex: 1"
                 />
-                <button type="button" id="togglePasswordBtn" class="btn btn-secondary" title="Mostrar/ocultar password" style="padding:8px 10px;">👁️</button>
+                <button
+                  type="button"
+                  id="togglePasswordBtn"
+                  class="btn btn-secondary"
+                  title="Mostrar/ocultar password"
+                  style="padding: 8px 10px"
+                >
+                  👁️
+                </button>
               </div>
             </div>
             <button
               id="updatePasswordBtn"
               class="btn btn-secondary"
-              style="width: 100%; margin-top: 8px;"
+              style="width: 100%; margin-top: 8px"
             >
               Atualizar Password
             </button>
-            <div id="updatePasswordStatus" style="margin-top: 16px;"></div>
+            <div id="updatePasswordStatus" style="margin-top: 16px"></div>
           </div>
 
           <!-- Turmas Existentes Card -->
@@ -196,8 +247,12 @@
                 <option value="12">12º ano</option>
               </select>
             </div>
-            <div id="turmasList" class="admin-list-container" style="max-height: 320px;">
-              <div class="admin-list-item" style="color: var(--text-muted);">
+            <div
+              id="turmasList"
+              class="admin-list-container"
+              style="max-height: 320px"
+            >
+              <div class="admin-list-item" style="color: var(--text-muted)">
                 A carregar turmas...
               </div>
             </div>
@@ -210,7 +265,14 @@
     <!-- We also import app.js to get signOut functionality -->
     <script src="js/app.js"></script>
     <script src="js/admin.js"></script>
-    <footer style="padding: 14px 0; text-align: center; color: var(--text-muted); font-size: 12px;">
+    <footer
+      style="
+        padding: 14px 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      "
+    >
       made by antonio.appleton | Departamento de Programação
     </footer>
   </body>

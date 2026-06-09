@@ -49,10 +49,11 @@ async function refreshTurmas() {
     ? turmas.filter((t) => String(t.ano) === selectedAno)
     : turmas;
   if (!filtered.length) {
-    el.innerHTML =
-      `<div class='admin-list-item' style='color: var(--text-muted);'>${
-        selectedAno ? "Nenhuma turma criada para este ano." : "Nenhuma turma criada."
-      }</div>`;
+    el.innerHTML = `<div class='admin-list-item' style='color: var(--text-muted);'>${
+      selectedAno
+        ? "Nenhuma turma criada para este ano."
+        : "Nenhuma turma criada."
+    }</div>`;
     return;
   }
   filtered.sort(compareTurmas);
@@ -86,8 +87,8 @@ async function getUserByEmail(email) {
   const users = Array.isArray(response?.data?.users)
     ? response.data.users
     : Array.isArray(response?.data)
-    ? response.data
-    : [];
+      ? response.data
+      : [];
   return users.find((u) => u.email === email) || null;
 }
 
@@ -98,7 +99,9 @@ async function updateUserPasswordByEmail(email, password) {
   }
 
   if (!window.supabase.auth?.admin?.updateUserById) {
-    throw new Error("A atualização de utilizador não está disponível na API Supabase atual.");
+    throw new Error(
+      "A atualização de utilizador não está disponível na API Supabase atual.",
+    );
   }
 
   const { error } = await window.supabase.auth.admin.updateUserById(user.id, {
@@ -161,6 +164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("cicloNome").value = "";
     await loadCiclos();
+    if (typeof loadCiclosForPaste === "function") await loadCiclosForPaste();
     alert("Ciclo criado com sucesso!");
   });
 
@@ -180,6 +184,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("turmaAno").value = "";
     document.getElementById("turmaCiclo").value = "";
     await refreshTurmas();
+    if (typeof loadTurmasForPaste === "function") await loadTurmasForPaste();
     alert("Turma criada com sucesso!");
   });
 
@@ -190,7 +195,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const password = document.getElementById("updateUserPassword").value;
       const statusEl = document.getElementById("updatePasswordStatus");
 
-      if (!password) return alert("Insira a nova password para atualizar o utilizador.");
+      if (!password)
+        return alert("Insira a nova password para atualizar o utilizador.");
       if (statusEl) {
         statusEl.className = "alert alert-success";
         statusEl.style.display = "block";
@@ -208,8 +214,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.error("Password update error", err);
         if (statusEl) {
           statusEl.className = "alert alert-error";
-          statusEl.textContent = "Erro ao atualizar password: " +
-            (err?.message || String(err));
+          statusEl.textContent =
+            "Erro ao atualizar password: " + (err?.message || String(err));
         }
         alert("Erro ao atualizar password: " + (err?.message || String(err)));
       }
@@ -232,72 +238,99 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  document.getElementById("importCsv").addEventListener("click", async () => {
-    const f = document.getElementById("csvFile").files[0];
-    if (!f) return alert("Por favor, selecione um ficheiro CSV primeiro.");
-
-    const statusEl = document.getElementById("importStatus");
-    if (statusEl) {
-      statusEl.className = "alert alert-success";
-      statusEl.style.display = "block";
-      statusEl.textContent = "A ler ficheiro CSV...";
+  // --- Colar lista de alunos (import rápido) ---
+  async function loadCiclosForPaste() {
+    const el = document.getElementById("pasteCiclo");
+    if (!el) return;
+    el.innerHTML = '<option value="">A carregar...</option>';
+    const { data, error } = await window.supabase
+      .from("ciclos")
+      .select("*")
+      .order("nome");
+    if (error) {
+      el.innerHTML = '<option value="">Erro a carregar</option>';
+      return;
     }
+    el.innerHTML =
+      '<option value="">-- selecionar ciclo --</option>' +
+      (data || [])
+        .map((c) => `<option value="${c.id}">${c.nome}</option>`)
+        .join("");
+  }
 
-    Papa.parse(f, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const rows = results.data
-          .map((r) => ({
-            nome:
-              r.nome ||
-              r.Name ||
-              r.Nome ||
-              r.NOME ||
-              r["Nome do aluno"] ||
-              r["nome do aluno"] ||
-              r["Nome do Aluno"],
-            ano:
-              r.ano || r.ANO || r["Ano"] || r["ano"]
-                ? Number(r.ano || r.ANO || r["Ano"] || r["ano"])
-                : null,
-            turma: r.turma || r.Turma || r["Turma"] || null,
-            criado_em: new Date().toISOString(),
-          }))
-          .filter((r) => r.nome);
+  async function loadTurmasForPaste() {
+    const el = document.getElementById("pasteTurma");
+    if (!el) return;
+    const cicloId = document.getElementById("pasteCiclo")?.value || null;
+    const anoVal = document.getElementById("pasteAno")?.value || null;
+    el.innerHTML = '<option value="">A carregar...</option>';
+    let query = window.supabase.from("turmas").select("*").order("nome");
+    if (cicloId) query = query.eq("ciclo_id", cicloId);
+    if (anoVal) query = query.eq("ano", Number(anoVal));
+    const { data, error } = await query;
+    if (error) {
+      el.innerHTML = '<option value="">Erro a carregar</option>';
+      return;
+    }
+    el.innerHTML =
+      '<option value="">-- selecionar turma --</option>' +
+      (data || [])
+        .map((t) => `<option value="${t.nome}">${t.nome}</option>`)
+        .join("");
+  }
 
-        if (statusEl) {
-          statusEl.textContent = "A importar " + rows.length + " alunos...";
-        }
+  // initialize paste import UI
+  await loadCiclosForPaste();
+  const pasteCicloEl = document.getElementById("pasteCiclo");
+  const pasteAnoEl = document.getElementById("pasteAno");
+  if (pasteCicloEl) pasteCicloEl.addEventListener("change", loadTurmasForPaste);
+  if (pasteAnoEl) pasteAnoEl.addEventListener("change", loadTurmasForPaste);
 
-        // bulk insert in batches
-        const batchSize = 100;
+  const pasteBtn = document.getElementById("pasteImportBtn");
+  if (pasteBtn) {
+    pasteBtn.addEventListener("click", async () => {
+      const statusEl = document.getElementById("pasteImportStatus");
+      const namesText = document.getElementById("pasteNames")?.value || "";
+      const names = namesText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!names.length)
+        return alert("Insira pelo menos um nome separado por vírgula.");
+      const anoVal = document.getElementById("pasteAno")?.value;
+      const ano = anoVal ? Number(anoVal) : null;
+      const turma = document.getElementById("pasteTurma")?.value || null;
+
+      const rows = names.map((n) => ({ nome: n, ano, turma }));
+
+      if (statusEl) {
+        statusEl.className = "alert alert-success";
+        statusEl.style.display = "block";
+        statusEl.textContent = `A inserir ${rows.length} alunos...`;
+      }
+
+      const batchSize = 100;
+      try {
         for (let i = 0; i < rows.length; i += batchSize) {
           const slice = rows.slice(i, i + batchSize);
           const { error } = await window.supabase.from("alunos").insert(slice);
-          if (error) {
-            if (statusEl) {
-              statusEl.className = "alert alert-error";
-              statusEl.textContent = "Erro na importação: " + error.message;
-            }
-            return alert("Erro na importação: " + error.message);
-          }
+          if (error) throw error;
         }
-
         if (statusEl) {
           statusEl.className = "alert alert-success";
-          statusEl.textContent =
-            "Importação concluída: " + rows.length + " alunos inseridos.";
+          statusEl.textContent = `Importação concluída: ${rows.length} alunos inseridos.`;
         }
-        document.getElementById("csvFile").value = "";
+        document.getElementById("pasteNames").value = "";
         await refreshTurmas();
-      },
-      error: (parseError) => {
+      } catch (err) {
+        console.error("Paste import error", err);
         if (statusEl) {
           statusEl.className = "alert alert-error";
-          statusEl.textContent = "Erro ao processar CSV: " + parseError.message;
+          statusEl.textContent =
+            "Erro ao importar: " + (err?.message || String(err));
         }
-      },
+        alert("Erro ao importar: " + (err?.message || String(err)));
+      }
     });
-  });
+  }
 });
