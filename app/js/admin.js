@@ -81,6 +81,14 @@ async function getUserByEmail(email) {
   }
 
   if (response?.error) {
+    if (
+      response.error.message?.includes("not_admin") ||
+      response.error.message?.includes("User not allowed")
+    ) {
+      throw new Error(
+        "Esta página está a usar a chave pública do Supabase. Para alterar passwords é necessário um endpoint seguro com service_role.",
+      );
+    }
     throw response.error;
   }
 
@@ -108,6 +116,14 @@ async function updateUserPasswordByEmail(email, password) {
     password,
   });
   if (error) {
+    if (
+      error.message?.includes("not_admin") ||
+      error.message?.includes("User not allowed")
+    ) {
+      throw new Error(
+        "Esta página está a usar a chave pública do Supabase. Para alterar passwords é necessário um endpoint seguro com service_role.",
+      );
+    }
     throw error;
   }
   return true;
