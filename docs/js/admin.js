@@ -333,4 +333,158 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
+  // --- Relatórios: carregar selects e gerar PDF ---
+  async function loadReportCiclos() {
+    const el = document.getElementById("reportCiclo");
+    if (!el) return;
+    el.innerHTML = '<option value="">A carregar...</option>';
+    const { data, error } = await window.supabase
+      .from("ciclos")
+      .select("*")
+      .order("nome");
+    if (error) {
+      el.innerHTML = '<option value="">Erro a carregar</option>';
+      return;
+    }
+    el.innerHTML =
+      '<option value="">Todos</option>' +
+      (data || [])
+        .map((c) => `<option value="${c.id}">${c.nome}</option>`)
+        .join("");
+  }
+
+  async function loadReportTurmas() {
+    const el = document.getElementById("reportTurma");
+    if (!el) return;
+    const cicloId = document.getElementById("reportCiclo")?.value || null;
+    const anoVal = document.getElementById("reportAno")?.value || null;
+    el.innerHTML = '<option value="">A carregar...</option>';
+    let query = window.supabase.from("turmas").select("*").order("nome");
+    if (cicloId) query = query.eq("ciclo_id", cicloId);
+    if (anoVal) query = query.eq("ano", Number(anoVal));
+    const { data, error } = await query;
+    if (error) {
+      el.innerHTML = '<option value="">Erro a carregar</option>';
+      return;
+    }
+    el.innerHTML =
+      '<option value="">Todas</option>' +
+      (data || [])
+        .map((t) => `<option value="${t.nome}">${t.nome}</option>`)
+        .join("");
+  }
+
+  // initialize report selects
+  await loadReportCiclos();
+  const reportCicloEl = document.getElementById("reportCiclo");
+  const reportAnoEl = document.getElementById("reportAno");
+  if (reportCicloEl) reportCicloEl.addEventListener("change", loadReportTurmas);
+  if (reportAnoEl) reportAnoEl.addEventListener("change", loadReportTurmas);
+  await loadReportTurmas();
+
+  const downloadReportBtn = document.getElementById("downloadReportBtn");
+  if (downloadReportBtn) {
+    downloadReportBtn.addEventListener("click", async () => {
+      const statusEl = document.getElementById("reportStatus");
+      if (statusEl) {
+        statusEl.className = "alert alert-success";
+        statusEl.style.display = "block";
+        statusEl.textContent = "A gerar PDF...";
+      }
+
+      const cicloId = document.getElementById("reportCiclo")?.value || null;
+      const ano = document.getElementById("reportAno")?.value || null;
+      const turma = document.getElementById("reportTurma")?.value || null;
+      const start = document.getElementById("reportStart")?.value || null;
+      const end = document.getElementById("reportEnd")?.value || null;
+
+      try {
+        let query = window.supabase
+          .from("ocorrencias")
+          .select("*")
+          .order("data", { ascending: false });
+        if (ano) query = query.eq("ano", Number(ano));
+        if (turma) query = query.eq("turma", turma);
+        else if (cicloId) {
+          const { data: turmasData } = await window.supabase
+            .from("turmas")
+            .select("nome")
+            .eq("ciclo_id", cicloId);
+          const nomes = (turmasData || []).map((t) => t.nome);
+          if (nomes.length) query = query.in("turma", nomes);
+        }
+        if (start) query = query.gte("data", start);
+        if (end) query = query.lte("data", end);
+
+        const { data: rows, error } = await query;
+        if (error) throw error;
+
+        const body = (rows || []).map((r) => [
+          r.data || (r.created_at ? r.created_at.slice(0, 10) : ""),
+          r.aluno_nome || "",
+          r.ano || "",
+          r.turma || "",
+          r.motivo || "",
+        ]);
+
+        async function loadImageDataURL(url) {
+          try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            return await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          } catch (e) {
+            return null;
+          }
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
+        const logoData = await loadImageDataURL("assets/logo.png");
+        if (logoData) {
+          doc.addImage(logoData, "PNG", 40, 30, 60, 60);
+        }
+        doc.setFontSize(18);
+        doc.text("SCRIPTORIUM", 110, 40);
+        doc.setFontSize(12);
+        doc.text("Relatório de Ocorrências", 110, 60);
+        const cicloText = (() => {
+          if (!cicloId) return "Todos os ciclos";
+          const sel = document.getElementById("reportCiclo");
+          return sel?.selectedOptions?.[0]?.text || "";
+        })();
+        const header = `Ciclo: ${cicloText}  Ano: ${ano || "Todos"}  Turma: ${turma || "Todas"}`;
+        doc.setFontSize(10);
+        doc.text(header, 40, 100);
+
+        doc.autoTable({
+          startY: 120,
+          head: [["Data", "Aluno", "Ano", "Turma", "Motivo"]],
+          body,
+          styles: { fontSize: 9, cellPadding: 4 },
+          headStyles: { fillColor: [30, 60, 120] },
+        });
+
+        const filename = `relatorio_ocorrencias_${new Date().toISOString().slice(0, 10)}.pdf`;
+        doc.save(filename);
+
+        if (statusEl) {
+          statusEl.className = "alert alert-success";
+          statusEl.textContent = `PDF gerado: ${filename}`;
+        }
+      } catch (err) {
+        console.error("Report error", err);
+        if (statusEl) {
+          statusEl.className = "alert alert-error";
+          statusEl.textContent =
+            "Erro ao gerar relatório: " + (err?.message || String(err));
+        }
+        alert("Erro ao gerar relatório: " + (err?.message || String(err)));
+      }
+    });
+  }
 });

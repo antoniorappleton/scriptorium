@@ -6,6 +6,8 @@
     <title>Admin — Scriptorium</title>
     <link rel="stylesheet" href="css/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   </head>
   <body>
     <header class="app-header">
@@ -73,6 +75,68 @@
             >
               Criar Ciclo
             </button>
+          </div>
+
+          <!-- Relatórios -->
+          <div class="app-card">
+            <h3 class="app-card-title">Relatórios</h3>
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 13px;
+                margin-bottom: 12px;
+              "
+            >
+              Exportar ocorrências para PDF. Selecione filtros e período.
+            </p>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1">
+                <label for="reportCiclo">Ciclo</label>
+                <select id="reportCiclo" class="form-control">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div class="form-group" style="width: 120px">
+                <label for="reportAno">Ano</label>
+                <select id="reportAno" class="form-control">
+                  <option value="">Todos</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1">
+                <label for="reportTurma">Turma</label>
+                <select id="reportTurma" class="form-control">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="reportStart">Data Início</label>
+                <input id="reportStart" type="date" class="form-control" />
+              </div>
+              <div class="form-group">
+                <label for="reportEnd">Data Fim</label>
+                <input id="reportEnd" type="date" class="form-control" />
+              </div>
+            </div>
+
+            <button
+              id="downloadReportBtn"
+              class="btn btn-primary"
+              style="width: 100%; margin-top: 8px"
+            >
+              Exportar PDF
+            </button>
+            <div id="reportStatus" style="margin-top: 12px"></div>
           </div>
 
           <!-- Criar Turma Card -->

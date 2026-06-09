@@ -178,6 +178,78 @@ function populateAlunosDatalist(items) {
     .join("");
 }
 
+// Load alunos for the registar select, filtered by ciclo/ano/turma
+async function loadAlunosForRegistar() {
+  const select = document.getElementById("alunoSelect");
+  if (!select) return;
+  select.innerHTML = '<option value="">A carregar...</option>';
+  const cicloId = document.getElementById("ciclo")?.value || null;
+  const ano = document.getElementById("ano")?.value || null;
+  const turma = document.getElementById("turma")?.value || null;
+
+  try {
+    let query;
+    if (turma) {
+      query = window.supabase
+        .from("alunos")
+        .select("id,nome,ano,turma")
+        .eq("turma", turma)
+        .order("nome");
+    } else if (ano) {
+      query = window.supabase
+        .from("alunos")
+        .select("id,nome,ano,turma")
+        .eq("ano", Number(ano))
+        .order("nome");
+    } else if (cicloId) {
+      // find turmas for ciclo
+      const { data: turmasData } = await window.supabase
+        .from("turmas")
+        .select("nome")
+        .eq("ciclo_id", cicloId);
+      const nomes = (turmasData || []).map((t) => t.nome);
+      if (nomes.length) {
+        query = window.supabase
+          .from("alunos")
+          .select("id,nome,ano,turma")
+          .in("turma", nomes)
+          .order("nome");
+      } else {
+        query = window.supabase
+          .from("alunos")
+          .select("id,nome,ano,turma")
+          .order("nome");
+      }
+    } else {
+      query = window.supabase
+        .from("alunos")
+        .select("id,nome,ano,turma")
+        .order("nome");
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    const items = data || [];
+    if (!items.length) {
+      select.innerHTML = '<option value="">Nenhum aluno encontrado</option>';
+      select.disabled = true;
+      return;
+    }
+    select.disabled = false;
+    select.innerHTML =
+      '<option value="">Selecione um aluno</option>' +
+      items
+        .map(
+          (a) =>
+            `<option value="${a.nome}" data-id="${a.id}">${a.nome}${a.ano ? " — " + a.ano + "º" : ""}${a.turma ? " — " + a.turma : ""}</option>`,
+        )
+        .join("");
+  } catch (e) {
+    console.error("loadAlunosForRegistar error", e);
+    select.innerHTML = '<option value="">Erro ao carregar alunos</option>';
+  }
+}
+
 async function sincronizarPendentes() {
   const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
   if (!pendentes.length) return alert("Nenhum registo pendente.");
@@ -774,6 +846,88 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (ocorrenciasListEl) {
     carregarOcorrencias();
     checkPendingSync();
+  }
+
+  // Export occurrences (Dashboard) -> PDF
+  async function generateDashboardPDF() {
+    const statusEl = document.getElementById("reportStatusDashboard");
+    if (statusEl) {
+      statusEl.style.display = "block";
+      statusEl.textContent = "A gerar PDF...";
+    }
+
+    try {
+      const rows = applyDashboardFilters(dashboardRows || []);
+      const body = (rows || []).map((r) => [
+        r.data || (r.created_at ? r.created_at.slice(0, 10) : ""),
+        r.alunos?.nome || r.aluno_nome || "",
+        r.ano || "",
+        r.turma || "",
+        r.motivo || "",
+      ]);
+
+      async function loadImageDataURL(url) {
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) {
+          return null;
+        }
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const logoData = await loadImageDataURL("assets/logo.png");
+      if (logoData) doc.addImage(logoData, "PNG", 40, 30, 60, 60);
+      doc.setFontSize(18);
+      doc.text("SCRIPTORIUM", 110, 40);
+      doc.setFontSize(12);
+      doc.text("Relatório de Ocorrências", 110, 60);
+
+      // header with applied filters
+      const f = getDashboardFilters();
+      const header = `Ano: ${f.ano || "Todos"}  Turma: ${f.turma || "Todas"}  Período: ${f.period || "Todos"}`;
+      doc.setFontSize(10);
+      doc.text(header, 40, 100);
+
+      doc.autoTable({
+        startY: 120,
+        head: [["Data", "Aluno", "Ano", "Turma", "Motivo"]],
+        body,
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [30, 60, 120] },
+      });
+
+      const filename = `relatorio_ocorrencias_${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(filename);
+
+      if (statusEl) statusEl.textContent = `PDF gerado: ${filename}`;
+    } catch (err) {
+      console.error("dashboard report error", err);
+      if (statusEl)
+        statusEl.textContent =
+          "Erro ao gerar PDF: " + (err?.message || String(err));
+      alert("Erro ao gerar PDF: " + (err?.message || String(err)));
+    }
+  }
+
+  const downloadBtn = document.getElementById("downloadOcorrenciasReport");
+  if (downloadBtn) {
+    // create a small status element next to the button if not present
+    let s = document.getElementById("reportStatusDashboard");
+    if (!s) {
+      s = document.createElement("div");
+      s.id = "reportStatusDashboard";
+      s.style.marginTop = "8px";
+      s.style.display = "none";
+      downloadBtn.parentNode.appendChild(s);
+    }
+    downloadBtn.addEventListener("click", generateDashboardPDF);
   }
 
   // Check admin and wire admin UI if present
