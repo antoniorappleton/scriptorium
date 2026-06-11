@@ -818,12 +818,27 @@ async function eliminarOcorrencia({ id, localIndex, searchQuery = "" }) {
     return;
   }
 
-  const { error } = await window.supabase
+  const { count, error } = await window.supabase
     .from("ocorrencias")
-    .delete()
+    .delete({ count: "exact" })
     .eq("id", id);
   if (error) {
     alert("Erro ao eliminar ocorrência: " + error.message);
+    return;
+  }
+  let deletedCount = count || 0;
+  if (!deletedCount) {
+    const rpcResult = await window.supabase.rpc("delete_ocorrencia_by_id", {
+      occurrence_id: id,
+    });
+    if (rpcResult.error) {
+      alert("Erro ao eliminar ocorrência: " + rpcResult.error.message);
+      return;
+    }
+    deletedCount = rpcResult.data || 0;
+  }
+  if (!deletedCount) {
+    alert("A ocorrência não foi eliminada. Pode já ter sido removida.");
     return;
   }
   await carregarOcorrencias(searchQuery);
