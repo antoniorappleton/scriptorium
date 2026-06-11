@@ -37,7 +37,7 @@
       });
     </script>
 
-    <main class="app-container">
+    <main class="app-container admin-container">
       <div style="margin-bottom: 24px">
         <h2
           style="
@@ -54,9 +54,9 @@
         </p>
       </div>
 
-      <div class="dashboard-grid">
+      <div class="dashboard-grid admin-dashboard-grid">
         <!-- Left Column: Forms -->
-        <div style="display: flex; flex-direction: column; gap: 24px">
+        <div class="admin-side-column" style="display: flex; flex-direction: column; gap: 24px">
           <!-- Criar Ciclo Card -->
           <div class="app-card">
             <h3 class="app-card-title">Criar Ciclo de Ensino</h3>
@@ -116,7 +116,7 @@
         </div>
 
         <!-- Right Column: CSV & Lists -->
-        <div style="display: flex; flex-direction: column; gap: 24px">
+        <div class="admin-main-column" style="display: flex; flex-direction: column; gap: 24px">
           <!-- Colar Lista de Alunos -->
           <div class="app-card">
             <h3 class="app-card-title">Colar Lista de Alunos</h3>
@@ -238,6 +238,45 @@
               Exportar PDF
             </button>
             <div id="reportStatus" style="margin-top: 12px"></div>
+          </div>
+
+          <!-- Alunos por Turma -->
+          <div class="app-card">
+            <h3 class="app-card-title">Alunos por Turma</h3>
+            <div class="form-row admin-filter-row">
+              <div class="form-group">
+                <label for="manageAno">Ano</label>
+                <select id="manageAno" class="form-control">
+                  <option value="">Todos</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="manageTurma">Turma</label>
+                <select id="manageTurma" class="form-control">
+                  <option value="">A carregar turmas...</option>
+                </select>
+              </div>
+            </div>
+            <div class="admin-toolbar">
+              <button id="deleteSelectedTurmaBtn" class="btn btn-secondary">
+                Eliminar Turma
+              </button>
+              <span id="studentsCount" class="admin-count-pill">0 alunos</span>
+            </div>
+            <div id="studentsByTurmaStatus" style="margin-top: 12px"></div>
+            <div id="studentsByTurmaList" class="admin-list-container admin-students-list">
+              <div class="admin-list-item" style="color: var(--text-muted)">
+                Selecione uma turma para ver os alunos.
+              </div>
+            </div>
           </div>
 
           <!-- Eliminar Ocorrências -->

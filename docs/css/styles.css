@@ -805,6 +805,107 @@ textarea.form-control {
   border-bottom: none;
 }
 
+.admin-container {
+  max-width: 1680px;
+  padding: 88px 18px 28px 18px;
+}
+
+.admin-container > div:first-child {
+  margin-bottom: 14px !important;
+}
+
+.admin-dashboard-grid {
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 2.25fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-side-column,
+.admin-main-column {
+  gap: 16px !important;
+}
+
+.admin-main-column {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(360px, 1fr));
+  align-items: start;
+}
+
+.admin-container .app-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.admin-container .app-card:hover {
+  transform: none;
+}
+
+.admin-container .app-card-title {
+  font-size: 16px;
+  margin-bottom: 14px;
+}
+
+.admin-container .form-group {
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.admin-container .form-group label {
+  font-size: 12px;
+}
+
+.admin-container .form-control {
+  padding: 9px 10px;
+}
+
+.admin-container textarea.form-control {
+  min-height: 78px;
+}
+
+.admin-filter-row {
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.admin-count-pill {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-students-list {
+  max-height: 360px;
+}
+
+.admin-list-item {
+  gap: 12px;
+}
+
+.admin-list-item > div {
+  min-width: 0;
+}
+
+.admin-list-item strong,
+.admin-list-item span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1200px) {
+  .admin-dashboard-grid,
+  .admin-main-column {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
