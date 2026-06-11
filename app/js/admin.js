@@ -319,11 +319,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ok = confirm("Eliminar definitivamente este aluno importado?");
     if (!ok) return;
     try {
-      const { error } = await window.supabase
+      const { count, error } = await window.supabase
         .from("alunos")
-        .delete()
+        .delete({ count: "exact" })
         .eq("id", studentId);
       if (error) throw error;
+      if (!count) {
+        throw new Error(
+          "Nenhum aluno foi eliminado. Verifique as permissões RLS da tabela alunos.",
+        );
+      }
       setStudentsStatus("Aluno eliminado com sucesso.");
       await loadStudentsForManagedTurma();
     } catch (err) {
@@ -347,25 +352,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       setStudentsStatus("A eliminar turma...");
       const byTurmaId = await window.supabase
         .from("alunos")
-        .delete()
+        .delete({ count: "exact" })
         .eq("turma_id", turma.id);
       if (byTurmaId.error) throw byTurmaId.error;
 
       let fallbackDelete = window.supabase
         .from("alunos")
-        .delete()
+        .delete({ count: "exact" })
         .eq("turma", turma.nome);
       if (turma.ano) fallbackDelete = fallbackDelete.eq("ano", Number(turma.ano));
       const fallbackResult = await fallbackDelete;
       if (fallbackResult.error) throw fallbackResult.error;
 
+      const deletedStudents =
+        (byTurmaId.count || 0) + (fallbackResult.count || 0);
+
       const deleteTurma = await window.supabase
         .from("turmas")
-        .delete()
+        .delete({ count: "exact" })
         .eq("id", turma.id);
       if (deleteTurma.error) throw deleteTurma.error;
+      if (!deleteTurma.count) {
+        throw new Error(
+          "A turma não foi eliminada. Verifique as permissões RLS da tabela turmas.",
+        );
+      }
 
-      setStudentsStatus("Turma eliminada com sucesso.");
+      setStudentsStatus(
+        `Turma eliminada com sucesso. ${deletedStudents} aluno(s) eliminado(s).`,
+      );
       await refreshTurmas();
       await loadManageTurmas();
       if (typeof loadTurmasForPaste === "function") await loadTurmasForPaste();
