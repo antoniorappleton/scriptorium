@@ -26,6 +26,27 @@ function compareTurmas(a, b) {
   });
 }
 
+let adminTurmasCache = [];
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getTurmaLabel(turma) {
+  const ano = turma?.ano ? `${turma.ano}.º ano` : "Ano por definir";
+  return `${turma?.nome || "Sem nome"} - ${ano}`;
+}
+
+function getSelectedManagedTurma() {
+  const id = document.getElementById("manageTurma")?.value;
+  return adminTurmasCache.find((t) => t.id === id) || null;
+}
+
 async function refreshTurmas() {
   const el = document.getElementById("turmasList");
   const filterEl = document.getElementById("turmasAnoFiltro");
@@ -45,9 +66,10 @@ async function refreshTurmas() {
   }
 
   const turmas = (data || []).slice();
+  adminTurmasCache = turmas.sort(compareTurmas);
   const filtered = selectedAno
-    ? turmas.filter((t) => String(t.ano) === selectedAno)
-    : turmas;
+    ? adminTurmasCache.filter((t) => String(t.ano) === selectedAno)
+    : adminTurmasCache;
   if (!filtered.length) {
     el.innerHTML = `<div class='admin-list-item' style='color: var(--text-muted);'>${
       selectedAno
@@ -56,13 +78,15 @@ async function refreshTurmas() {
     }</div>`;
     return;
   }
-  filtered.sort(compareTurmas);
   el.innerHTML = filtered
     .map(
       (t) =>
         `<div class="admin-list-item">
-          <strong>${t.nome} (Ano ${t.ano || ""})</strong>
-          <span style="color: var(--text-muted); font-size: 11px;">Ciclo: ${t.ciclos?.nome || "Sem Ciclo"}</span>
+          <div>
+            <strong>${escapeHtml(t.nome)} (Ano ${escapeHtml(t.ano || "")})</strong>
+            <span style="color: var(--text-muted); font-size: 11px;">Ciclo: ${escapeHtml(t.ciclos?.nome || "Sem Ciclo")}</span>
+          </div>
+          <button class="icon-btn danger" data-delete-turma-id="${escapeHtml(t.id)}" title="Eliminar turma">x</button>
         </div>`,
     )
     .join("");
@@ -70,7 +94,7 @@ async function refreshTurmas() {
 
 async function updateUserPasswordByEmail(email, password) {
   if (email !== "scriptorium@colegio-ramalhao.com") {
-    throw new Error("Este painel so altera a password da conta Scriptorium.");
+    throw new Error("Este painel só altera a password da conta Scriptorium.");
   }
 
   const { data, error } = await window.supabase.functions.invoke(
@@ -82,7 +106,7 @@ async function updateUserPasswordByEmail(email, password) {
   if (error) {
     throw new Error(
       error.message ||
-        "Nao foi possivel chamar a Edge Function update-scriptorium-password.",
+        "Não foi possível chamar a Edge Function update-scriptorium-password.",
     );
   }
   if (data?.error) {
@@ -119,9 +143,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Show a more informative alert during debugging
       const errMsg = profError
         ? profError.message || String(profError)
-        : "Sem permissÃ£o de admin";
+        : "Sem permissão de admin";
       alert(
-        "Acesso negado: Apenas administradores podem aceder a esta pÃ¡gina.\n\nDetalhe: " +
+        "Acesso negado: Apenas administradores podem aceder a esta página.\n\nDetalhe: " +
           errMsg,
       );
       window.location.href = "index.html";
@@ -142,10 +166,223 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   await refreshTurmas();
+  await loadManageTurmas();
+
+  const manageAnoEl = document.getElementById("manageAno");
+  const manageTurmaEl = document.getElementById("manageTurma");
+  if (manageAnoEl) manageAnoEl.addEventListener("change", loadManageTurmas);
+  if (manageTurmaEl) {
+    manageTurmaEl.addEventListener("change", loadStudentsForManagedTurma);
+  }
+
+  const turmasListEl = document.getElementById("turmasList");
+  if (turmasListEl) {
+    turmasListEl.addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-delete-turma-id]");
+      if (!btn) return;
+      await deleteTurmaById(btn.dataset.deleteTurmaId);
+    });
+  }
+
+  const deleteSelectedTurmaBtn = document.getElementById(
+    "deleteSelectedTurmaBtn",
+  );
+  if (deleteSelectedTurmaBtn) {
+    deleteSelectedTurmaBtn.addEventListener("click", async () => {
+      const turma = getSelectedManagedTurma();
+      if (!turma) {
+        alert("Selecione uma turma para eliminar.");
+        return;
+      }
+      await deleteTurmaById(turma.id);
+    });
+  }
+
+  const studentsListEl = document.getElementById("studentsByTurmaList");
+  if (studentsListEl) {
+    studentsListEl.addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-delete-student-id]");
+      if (!btn) return;
+      await deleteStudentById(btn.dataset.deleteStudentId);
+    });
+  }
+
+  function setStudentsCount(count) {
+    const el = document.getElementById("studentsCount");
+    if (el) el.textContent = `${count} aluno${count === 1 ? "" : "s"}`;
+  }
+
+  function setStudentsStatus(message, type = "success") {
+    const el = document.getElementById("studentsByTurmaStatus");
+    if (!el) return;
+    if (!message) {
+      el.className = "";
+      el.textContent = "";
+      return;
+    }
+    el.className = type === "error" ? "alert alert-error" : "alert alert-success";
+    el.style.display = "block";
+    el.textContent = message;
+  }
+
+  async function loadManageTurmas() {
+    const el = document.getElementById("manageTurma");
+    const ano = document.getElementById("manageAno")?.value || "";
+    if (!el) return;
+
+    const previous = el.value;
+    const filtered = ano
+      ? adminTurmasCache.filter((t) => String(t.ano) === ano)
+      : adminTurmasCache;
+
+    if (!filtered.length) {
+      el.innerHTML = '<option value="">Sem turmas</option>';
+      setStudentsCount(0);
+      document.getElementById("studentsByTurmaList").innerHTML =
+        '<div class="admin-list-item" style="color: var(--text-muted)">Nenhuma turma encontrada.</div>';
+      return;
+    }
+
+    el.innerHTML =
+      '<option value="">-- selecionar turma --</option>' +
+      filtered
+        .map(
+          (t) =>
+            `<option value="${escapeHtml(t.id)}">${escapeHtml(getTurmaLabel(t))}</option>`,
+        )
+        .join("");
+    if (filtered.some((t) => t.id === previous)) el.value = previous;
+    await loadStudentsForManagedTurma();
+  }
+
+  async function loadStudentsForManagedTurma() {
+    const list = document.getElementById("studentsByTurmaList");
+    const turma = getSelectedManagedTurma();
+    setStudentsStatus("");
+    setStudentsCount(0);
+    if (!list) return;
+    if (!turma) {
+      list.innerHTML =
+        '<div class="admin-list-item" style="color: var(--text-muted)">Selecione uma turma para ver os alunos.</div>';
+      return;
+    }
+
+    list.innerHTML =
+      '<div class="admin-list-item" style="color: var(--text-muted)">A carregar alunos...</div>';
+
+    const byId = new Map();
+    const byTurmaId = await window.supabase
+      .from("alunos")
+      .select("id,nome,ano,turma,turma_id")
+      .eq("turma_id", turma.id)
+      .order("nome");
+    if (byTurmaId.error) throw byTurmaId.error;
+    (byTurmaId.data || []).forEach((student) => byId.set(student.id, student));
+
+    let fallbackQuery = window.supabase
+      .from("alunos")
+      .select("id,nome,ano,turma,turma_id")
+      .eq("turma", turma.nome)
+      .order("nome");
+    if (turma.ano) fallbackQuery = fallbackQuery.eq("ano", Number(turma.ano));
+    const byName = await fallbackQuery;
+    if (byName.error) throw byName.error;
+    (byName.data || []).forEach((student) => byId.set(student.id, student));
+
+    const students = Array.from(byId.values()).sort((a, b) =>
+      String(a.nome || "").localeCompare(String(b.nome || ""), "pt", {
+        sensitivity: "base",
+      }),
+    );
+    setStudentsCount(students.length);
+
+    if (!students.length) {
+      list.innerHTML =
+        '<div class="admin-list-item" style="color: var(--text-muted)">Esta turma ainda não tem alunos importados.</div>';
+      return;
+    }
+
+    list.innerHTML = students
+      .map(
+        (student) => `<div class="admin-list-item">
+          <div>
+            <strong>${escapeHtml(student.nome)}</strong>
+            <span style="color: var(--text-muted); font-size: 11px;">${escapeHtml(student.ano || turma.ano || "")}.º ano | ${escapeHtml(student.turma || turma.nome || "")}</span>
+          </div>
+          <button class="icon-btn danger" data-delete-student-id="${escapeHtml(student.id)}" title="Eliminar aluno">x</button>
+        </div>`,
+      )
+      .join("");
+  }
+
+  async function deleteStudentById(studentId) {
+    const ok = confirm("Eliminar definitivamente este aluno importado?");
+    if (!ok) return;
+    try {
+      const { error } = await window.supabase
+        .from("alunos")
+        .delete()
+        .eq("id", studentId);
+      if (error) throw error;
+      setStudentsStatus("Aluno eliminado com sucesso.");
+      await loadStudentsForManagedTurma();
+    } catch (err) {
+      console.error("Delete student error", err);
+      setStudentsStatus(
+        "Erro ao eliminar aluno: " + (err?.message || String(err)),
+        "error",
+      );
+    }
+  }
+
+  async function deleteTurmaById(turmaId) {
+    const turma = adminTurmasCache.find((t) => t.id === turmaId);
+    if (!turma) return;
+    const ok = confirm(
+      `Eliminar definitivamente a turma ${getTurmaLabel(turma)} e os alunos associados?`,
+    );
+    if (!ok) return;
+
+    try {
+      setStudentsStatus("A eliminar turma...");
+      const byTurmaId = await window.supabase
+        .from("alunos")
+        .delete()
+        .eq("turma_id", turma.id);
+      if (byTurmaId.error) throw byTurmaId.error;
+
+      let fallbackDelete = window.supabase
+        .from("alunos")
+        .delete()
+        .eq("turma", turma.nome);
+      if (turma.ano) fallbackDelete = fallbackDelete.eq("ano", Number(turma.ano));
+      const fallbackResult = await fallbackDelete;
+      if (fallbackResult.error) throw fallbackResult.error;
+
+      const deleteTurma = await window.supabase
+        .from("turmas")
+        .delete()
+        .eq("id", turma.id);
+      if (deleteTurma.error) throw deleteTurma.error;
+
+      setStudentsStatus("Turma eliminada com sucesso.");
+      await refreshTurmas();
+      await loadManageTurmas();
+      if (typeof loadTurmasForPaste === "function") await loadTurmasForPaste();
+      if (typeof loadReportTurmas === "function") await loadReportTurmas();
+    } catch (err) {
+      console.error("Delete turma error", err);
+      setStudentsStatus(
+        "Erro ao eliminar turma: " + (err?.message || String(err)),
+        "error",
+      );
+      alert("Erro ao eliminar turma: " + (err?.message || String(err)));
+    }
+  }
 
   document.getElementById("createCiclo").addEventListener("click", async () => {
     const nome = document.getElementById("cicloNome").value.trim();
-    if (!nome) return alert("Nome do ciclo Ã© obrigatÃ³rio");
+    if (!nome) return alert("Nome do ciclo é obrigatório");
 
     const { error } = await window.supabase.from("ciclos").insert([{ nome }]);
     if (error) return alert("Erro a criar ciclo: " + error.message);
@@ -162,7 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ano = Number(document.getElementById("turmaAno").value) || null;
     const ciclo_id = document.getElementById("turmaCiclo").value || null;
 
-    if (!nome) return alert("Nome da turma Ã© obrigatÃ³rio");
+    if (!nome) return alert("Nome da turma é obrigatório");
 
     const { error } = await window.supabase
       .from("turmas")
@@ -173,6 +410,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("turmaAno").value = "";
     document.getElementById("turmaCiclo").value = "";
     await refreshTurmas();
+    await loadManageTurmas();
     // ensure paste-import turmas are updated to include the new turma
     if (typeof loadTurmasForPaste === "function") await loadTurmasForPaste();
     alert("Turma criada com sucesso!");
@@ -220,14 +458,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!pwd) return;
       if (pwd.type === "password") {
         pwd.type = "text";
-        togglePasswordBtn.textContent = "ðŸ™ˆ";
+        togglePasswordBtn.textContent = "Ocultar";
       } else {
         pwd.type = "password";
-        togglePasswordBtn.textContent = "ðŸ‘ï¸";
+        togglePasswordBtn.textContent = "Ver";
       }
     });
   }
-  // --- Colar lista de alunos (import rÃ¡pido) ---
+  // --- Colar lista de alunos (import rápido) ---
   async function loadCiclosForPaste() {
     const el = document.getElementById("pasteCiclo");
     if (!el) return;
@@ -264,7 +502,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     el.innerHTML =
       '<option value="">-- selecionar turma --</option>' +
       (data || [])
-        .map((t) => `<option value="${t.nome}">${t.nome}</option>`)
+        .map(
+          (t) =>
+            `<option value="${escapeHtml(t.id)}" data-nome="${escapeHtml(t.nome)}" data-ano="${escapeHtml(t.ano || "")}" data-ciclo-id="${escapeHtml(t.ciclo_id || "")}">${escapeHtml(t.nome)}</option>`,
+        )
         .join("");
   }
 
@@ -285,12 +526,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         .map((s) => s.trim())
         .filter(Boolean);
       if (!names.length)
-        return alert("Insira pelo menos um nome separado por vÃ­rgula.");
-      const anoVal = document.getElementById("pasteAno")?.value;
+        return alert("Insira pelo menos um nome separado por vírgula.");
+      const turmaSelect = document.getElementById("pasteTurma");
+      const turmaId = turmaSelect?.value || null;
+      const selectedTurmaOption = turmaSelect?.selectedOptions?.[0] || null;
+      const anoVal =
+        document.getElementById("pasteAno")?.value ||
+        selectedTurmaOption?.dataset?.ano ||
+        "";
       const ano = anoVal ? Number(anoVal) : null;
-      const turma = document.getElementById("pasteTurma")?.value || null;
+      const turma = selectedTurmaOption?.dataset?.nome || null;
+      const cicloId = document.getElementById("pasteCiclo")?.value || null;
 
-      const rows = names.map((n) => ({ nome: n, ano, turma }));
+      if (!turmaId || !turma) {
+        return alert("Selecione a turma antes de importar alunos.");
+      }
+
+      const rows = names.map((n) => ({
+        nome: n,
+        ano,
+        turma,
+        turma_id: turmaId,
+        ciclo_id: cicloId || selectedTurmaOption?.dataset?.cicloId || null,
+      }));
 
       if (statusEl) {
         statusEl.className = "alert alert-success";
@@ -307,10 +565,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         if (statusEl) {
           statusEl.className = "alert alert-success";
-          statusEl.textContent = `ImportaÃ§Ã£o concluÃ­da: ${rows.length} alunos inseridos.`;
+          statusEl.textContent = `Importação concluída: ${rows.length} alunos inseridos.`;
         }
         document.getElementById("pasteNames").value = "";
         await refreshTurmas();
+        await loadManageTurmas();
+        await loadStudentsForManagedTurma();
       } catch (err) {
         console.error("Paste import error", err);
         if (statusEl) {
@@ -323,7 +583,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // --- RelatÃ³rios: carregar selects e gerar PDF ---
+  // --- Relatórios: carregar selects e gerar PDF ---
   async function loadReportCiclos() {
     const el = document.getElementById("reportCiclo");
     if (!el) return;
@@ -442,7 +702,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         doc.setFontSize(18);
         doc.text("SCRIPTORIUM", 110, 40);
         doc.setFontSize(12);
-        doc.text("RelatÃ³rio de OcorrÃªncias", 110, 60);
+        doc.text("Relatório de Ocorrências", 110, 60);
         const cicloText = (() => {
           if (!cicloId) return "Todos os ciclos";
           const sel = document.getElementById("reportCiclo");
@@ -472,9 +732,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (statusEl) {
           statusEl.className = "alert alert-error";
           statusEl.textContent =
-            "Erro ao gerar relatÃ³rio: " + (err?.message || String(err));
+            "Erro ao gerar relatório: " + (err?.message || String(err));
         }
-        alert("Erro ao gerar relatÃ³rio: " + (err?.message || String(err)));
+        alert("Erro ao gerar relatório: " + (err?.message || String(err)));
       }
     });
   }
@@ -487,23 +747,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       const statusEl = document.getElementById("deleteOccurrencesStatus");
 
       if (!start || !end) {
-        alert("Defina a data de inÃ­cio e a data de fim.");
+        alert("Defina a data de início e a data de fim.");
         return;
       }
       if (start > end) {
-        alert("A data de inÃ­cio nÃ£o pode ser posterior Ã  data de fim.");
+        alert("A data de início não pode ser posterior à data de fim.");
         return;
       }
 
       const ok = confirm(
-        `Eliminar definitivamente todas as ocorrÃªncias entre ${start} e ${end}?`,
+        `Eliminar definitivamente todas as ocorrências entre ${start} e ${end}?`,
       );
       if (!ok) return;
 
       if (statusEl) {
         statusEl.className = "alert alert-success";
         statusEl.style.display = "block";
-        statusEl.textContent = "A eliminar ocorrÃªncias...";
+        statusEl.textContent = "A eliminar ocorrências...";
       }
       deleteOccurrencesBtn.disabled = true;
 
@@ -517,16 +777,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (statusEl) {
           statusEl.className = "alert alert-success";
-          statusEl.textContent = `${count ?? 0} ocorrÃªncia(s) eliminada(s).`;
+          statusEl.textContent = `${count ?? 0} ocorrência(s) eliminada(s).`;
         }
       } catch (err) {
         console.error("Delete occurrences error", err);
         if (statusEl) {
           statusEl.className = "alert alert-error";
           statusEl.textContent =
-            "Erro ao eliminar ocorrÃªncias: " + (err?.message || String(err));
+            "Erro ao eliminar ocorrências: " + (err?.message || String(err));
         }
-        alert("Erro ao eliminar ocorrÃªncias: " + (err?.message || String(err)));
+        alert("Erro ao eliminar ocorrências: " + (err?.message || String(err)));
       } finally {
         deleteOccurrencesBtn.disabled = false;
       }
