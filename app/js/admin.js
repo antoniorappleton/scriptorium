@@ -783,16 +783,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       deleteOccurrencesBtn.disabled = true;
 
       try {
+        const existing = await window.supabase
+          .from("ocorrencias")
+          .select("id", { count: "exact", head: true })
+          .gte("data", start)
+          .lte("data", end);
+        if (existing.error) throw existing.error;
+
         const { count, error } = await window.supabase
           .from("ocorrencias")
           .delete({ count: "exact" })
           .gte("data", start)
           .lte("data", end);
         if (error) throw error;
+        let deletedCount = count || 0;
+        if ((existing.count || 0) > 0 && !deletedCount) {
+          const rpcResult = await window.supabase.rpc(
+            "delete_ocorrencias_between",
+            {
+              start_date: start,
+              end_date: end,
+            },
+          );
+          if (rpcResult.error) throw rpcResult.error;
+          deletedCount = rpcResult.data || 0;
+        }
 
         if (statusEl) {
-          statusEl.className = "alert alert-success";
-          statusEl.textContent = `${count ?? 0} ocorrência(s) eliminada(s).`;
+          if ((existing.count || 0) > 0 && !deletedCount) {
+            statusEl.className = "alert alert-error";
+            statusEl.textContent =
+              "Foram encontradas ocorrências, mas nenhuma foi eliminada. Pode já terem sido removidas por outro utilizador.";
+          } else {
+            statusEl.className = "alert alert-success";
+            statusEl.textContent = `${deletedCount} ocorrência(s) eliminada(s).`;
+          }
         }
       } catch (err) {
         console.error("Delete occurrences error", err);
