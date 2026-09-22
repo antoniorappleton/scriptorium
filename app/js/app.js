@@ -739,6 +739,7 @@ async function carregarOcorrencias(q = "") {
               <div class="ocorrencia-meta">
                 <span>📅 ${formattedDate}</span>
                 ${anoTurmaText ? `<span>• 🏫 ${anoTurmaText}</span>` : ""}
+                ${r.diretor_turma ? `<span>• 👤 DT: ${r.diretor_turma}</span>` : ""}
               </div>
               <div class="ocorrencia-reason">${r.motivo || "Sem motivo especificado."}</div>
             </div>
@@ -779,6 +780,7 @@ async function carregarOcorrencias(q = "") {
               <div class="ocorrencia-meta">
                 <span>📅 ${formattedDate}</span>
                 ${anoTurmaText ? `<span>• 🏫 ${anoTurmaText}</span>` : ""}
+                ${r.diretor_turma ? `<span>• 👤 DT: ${r.diretor_turma}</span>` : ""}
               </div>
               <div class="ocorrencia-reason">${r.motivo}</div>
             </div>
@@ -891,12 +893,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       const submitBtn = form.querySelector("button[type=submit]");
       const selectedAluno =
         alunoSelectEl?.options[alunoSelectEl.selectedIndex] || null;
+      const cicloEl = document.getElementById("ciclo");
+      const selectedCicloId = cicloEl?.value || "";
+      const selectedAno = anoEl?.value || "";
+      const selectedTurmaNome = turmaEl?.value || "";
+      const selectedTurma = getRegistarFilteredTurmas(
+        selectedCicloId,
+        selectedAno,
+      ).find((t) => t.nome === selectedTurmaNome);
 
       const dados = {
         aluno_id: selectedAluno?.dataset?.id || null,
         aluno_nome: alunoSelectEl ? alunoSelectEl.value.trim() : "",
         ano: anoEl ? Number(anoEl.value) : null,
         turma: turmaEl ? turmaEl.value.trim() : null,
+        diretor_turma: selectedTurma?.diretor_turma || null,
         data: dataEl ? dataEl.value : new Date().toISOString().slice(0, 10),
         motivo: motivoEl ? motivoEl.value.trim() : "",
         created_at: new Date().toISOString(),
