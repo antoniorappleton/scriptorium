@@ -1083,6 +1083,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         r.aluno_nome || "",
         r.ano || "",
         r.turma || "",
+        r.diretor_turma || "",
         r.motivo || "",
       ]);
 
@@ -1128,7 +1129,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       doc.autoTable({
         startY: start || end ? 134 : 120,
-        head: [["Data", "Aluno", "Ano", "Turma", "Motivo"]],
+        head: [["Data", "Aluno", "Ano", "Turma", "DT", "Motivo"]],
         body,
         styles: { fontSize: 9, cellPadding: 4 },
         headStyles: { fillColor: [30, 60, 120] },
