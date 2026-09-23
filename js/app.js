@@ -138,8 +138,17 @@ async function initRegistarFilters() {
   const cicloEl = document.getElementById("ciclo");
   const anoEl = document.getElementById("ano");
   const turmaEl = document.getElementById("turma");
+  const alunoSearchEl = document.getElementById("alunoSearch");
+
+  // Using the ciclo/ano/turma cascade takes over the aluno list, so drop any
+  // active free-text search to avoid the two mechanisms fighting each other.
+  function clearAlunoSearch() {
+    if (alunoSearchEl) alunoSearchEl.value = "";
+  }
+
   if (cicloEl) {
     cicloEl.addEventListener("change", () => {
+      clearAlunoSearch();
       updateRegistarAnoOptions();
       updateRegistarTurmaOptions();
       loadAlunosForRegistar();
@@ -147,12 +156,35 @@ async function initRegistarFilters() {
   }
   if (anoEl) {
     anoEl.addEventListener("change", () => {
+      clearAlunoSearch();
       updateRegistarTurmaOptions();
       loadAlunosForRegistar();
     });
   }
   if (turmaEl) {
-    turmaEl.addEventListener("change", loadAlunosForRegistar);
+    turmaEl.addEventListener("change", () => {
+      clearAlunoSearch();
+      loadAlunosForRegistar();
+    });
+  }
+
+  if (alunoSearchEl) {
+    const debouncedSearch = debounce(async (q) => {
+      if (!q) {
+        await loadAlunosForRegistar();
+        return;
+      }
+      const select = document.getElementById("alunoSelect");
+      if (select) {
+        select.innerHTML = '<option value="">A pesquisar...</option>';
+        select.disabled = true;
+      }
+      const items = await fetchAlunoSuggestions(q, null, null);
+      renderAlunoSelectOptions(items);
+    }, 300);
+    alunoSearchEl.addEventListener("input", (e) => {
+      debouncedSearch(e.target.value.trim());
+    });
   }
 }
 
@@ -187,17 +219,38 @@ function populateAlunosDatalist(items) {
     .join("");
 }
 
+// Renders <option> elements for the aluno select, embedding ano/turma so the
+// submit handler can use them even when the student was found via a free-text
+// search instead of the ciclo/ano/turma cascade.
+function renderAlunoSelectOptions(items) {
+  const select = document.getElementById("alunoSelect");
+  if (!select) return;
+  if (!items.length) {
+    select.innerHTML = '<option value="">Nenhum aluno encontrado</option>';
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  select.innerHTML =
+    '<option value="">Selecione um aluno</option>' +
+    items
+      .map(
+        (a) =>
+          `<option value="${a.nome}" data-id="${a.id}" data-ano="${a.ano ?? ""}" data-turma="${a.turma ?? ""}">${a.nome}${a.ano ? " — " + a.ano + "º" : ""}${a.turma ? " — " + a.turma : ""}</option>`,
+      )
+      .join("");
+}
+
 // Load alunos for the registar select, filtered by ciclo/ano/turma
 async function loadAlunosForRegistar() {
   const select = document.getElementById("alunoSelect");
   if (!select) return;
-  const cicloId = document.getElementById("ciclo")?.value || null;
   const ano = document.getElementById("ano")?.value || null;
   const turma = document.getElementById("turma")?.value || null;
 
-  if (!cicloId || !ano || !turma) {
+  if (!ano || !turma) {
     select.innerHTML =
-      '<option value="">Selecione ciclo, ano e turma primeiro</option>';
+      '<option value="">Pesquise o nome acima ou selecione ano e turma</option>';
     select.disabled = true;
     return;
   }
@@ -214,21 +267,7 @@ async function loadAlunosForRegistar() {
       .order("nome");
     const { data, error } = await query;
     if (error) throw error;
-    const items = data || [];
-    if (!items.length) {
-      select.innerHTML = '<option value="">Nenhum aluno encontrado</option>';
-      select.disabled = true;
-      return;
-    }
-    select.disabled = false;
-    select.innerHTML =
-      '<option value="">Selecione um aluno</option>' +
-      items
-        .map(
-          (a) =>
-            `<option value="${a.nome}" data-id="${a.id}">${a.nome}${a.ano ? " — " + a.ano + "º" : ""}${a.turma ? " — " + a.turma : ""}</option>`,
-        )
-        .join("");
+    renderAlunoSelectOptions(data || []);
   } catch (e) {
     console.error("loadAlunosForRegistar error", e);
     select.innerHTML = '<option value="">Erro ao carregar alunos</option>';
@@ -893,20 +932,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       const submitBtn = form.querySelector("button[type=submit]");
       const selectedAluno =
         alunoSelectEl?.options[alunoSelectEl.selectedIndex] || null;
-      const cicloEl = document.getElementById("ciclo");
-      const selectedCicloId = cicloEl?.value || "";
-      const selectedAno = anoEl?.value || "";
-      const selectedTurmaNome = turmaEl?.value || "";
-      const selectedTurma = getRegistarFilteredTurmas(
-        selectedCicloId,
-        selectedAno,
-      ).find((t) => t.nome === selectedTurmaNome);
+      // The chosen aluno (whether found via free-text search or via the
+      // ciclo/ano/turma cascade) is the source of truth for ano/turma —
+      // this works regardless of which path was used to find them.
+      const anoFinal = selectedAluno?.dataset?.ano
+        ? Number(selectedAluno.dataset.ano)
+        : anoEl?.value
+          ? Number(anoEl.value)
+          : null;
+      const turmaFinal =
+        selectedAluno?.dataset?.turma || turmaEl?.value?.trim() || null;
+      const selectedTurma = registarTurmasCache.find(
+        (t) => String(t.ano) === String(anoFinal) && t.nome === turmaFinal,
+      );
 
       const dados = {
         aluno_id: selectedAluno?.dataset?.id || null,
         aluno_nome: alunoSelectEl ? alunoSelectEl.value.trim() : "",
-        ano: anoEl ? Number(anoEl.value) : null,
-        turma: turmaEl ? turmaEl.value.trim() : null,
+        ano: anoFinal,
+        turma: turmaFinal,
         diretor_turma: selectedTurma?.diretor_turma || null,
         data: dataEl ? dataEl.value : new Date().toISOString().slice(0, 10),
         motivo: motivoEl ? motivoEl.value.trim() : "",
