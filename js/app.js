@@ -241,16 +241,19 @@ function renderAlunoSelectOptions(items) {
       .join("");
 }
 
-// Load alunos for the registar select, filtered by ciclo/ano/turma
+// Load alunos for the registar select, progressively filtered by whichever
+// of ciclo/ano/turma are already selected — the list narrows as each filter
+// is picked, instead of waiting for all three.
 async function loadAlunosForRegistar() {
   const select = document.getElementById("alunoSelect");
   if (!select) return;
+  const cicloId = document.getElementById("ciclo")?.value || null;
   const ano = document.getElementById("ano")?.value || null;
   const turma = document.getElementById("turma")?.value || null;
 
-  if (!ano || !turma) {
+  if (!cicloId && !ano && !turma) {
     select.innerHTML =
-      '<option value="">Pesquise o nome acima ou selecione ano e turma</option>';
+      '<option value="">Pesquise o nome acima ou selecione ciclo, ano ou turma</option>';
     select.disabled = true;
     return;
   }
@@ -259,12 +262,13 @@ async function loadAlunosForRegistar() {
   select.disabled = true;
 
   try {
-    const query = window.supabase
+    let query = window.supabase
       .from("alunos")
       .select("id,nome,ano,turma")
-      .eq("ano", Number(ano))
-      .eq("turma", turma)
       .order("nome");
+    if (cicloId) query = query.eq("ciclo_id", cicloId);
+    if (ano) query = query.eq("ano", Number(ano));
+    if (turma) query = query.eq("turma", turma);
     const { data, error } = await query;
     if (error) throw error;
     renderAlunoSelectOptions(data || []);

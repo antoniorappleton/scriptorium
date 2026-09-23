@@ -59,7 +59,7 @@
             <div class="form-group">
               <label for="alunoSelect">Nome do Aluno</label>
               <select id="alunoSelect" required class="form-control">
-                <option value="">Pesquise o nome acima ou filtre por turma em baixo</option>
+                <option value="">Pesquise o nome acima ou selecione ciclo/ano/turma em baixo</option>
               </select>
             </div>
 
@@ -128,6 +128,7 @@
     </main>
 
     <script src="js/supabase.js"></script>
+    <script src="js/pwa-install.js"></script>
     <script>
       (async () => {
         if (window.supabaseReady) await window.supabaseReady;

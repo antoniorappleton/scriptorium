@@ -1,4 +1,4 @@
-const CACHE_NAME = "scriptorium-v13";
+const CACHE_NAME = "scriptorium-v16";
 const PRECACHE = [
   "./",
   "index.html",
@@ -9,6 +9,7 @@ const PRECACHE = [
   "js/app.js",
   "js/supabase.js",
   "js/admin.js",
+  "js/pwa-install.js",
   "manifest.json",
   "assets/logo.png",
   "assets/logo.svg",
