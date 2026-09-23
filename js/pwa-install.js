@@ -24,7 +24,8 @@
     btn.type = "button";
     btn.id = "pwaInstallBtn";
     btn.title = "Instalar aplicação no dispositivo";
-    btn.innerHTML = "📲 Instalar";
+    btn.innerHTML =
+      '<span aria-hidden="true">📲</span><span class="pwa-install-label"> Instalar</span>';
     return btn;
   }
 
