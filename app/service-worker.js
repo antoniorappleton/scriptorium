@@ -1,4 +1,4 @@
-const CACHE_NAME = "scriptorium-v16";
+const CACHE_NAME = "scriptorium-v17";
 const PRECACHE = [
   "./",
   "index.html",

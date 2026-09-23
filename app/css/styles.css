@@ -136,6 +136,44 @@ nav.nav-menu a.active {
   font-weight: 600;
 }
 
+/* Small screens: header items were overflowing off-screen (e.g. "Sair"
+   became unreachable) with no way to scroll to them — compact everything
+   and allow horizontal scroll as a safety net. */
+@media (max-width: 640px) {
+  header.app-header {
+    padding: 0 12px;
+  }
+  .brand-text .tag {
+    display: none;
+  }
+  .brand-text h1 {
+    font-size: 16px;
+  }
+  .brand-logo {
+    height: 32px;
+    width: 32px;
+  }
+  nav.nav-menu {
+    gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: 60vw;
+  }
+  nav.nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+  nav.nav-menu a,
+  nav.nav-menu button {
+    font-size: 12px;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+  .pwa-install-label {
+    display: none;
+  }
+}
+
 /* Main Layout */
 main.app-container {
   flex: 1;
