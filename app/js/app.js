@@ -1,3 +1,13 @@
+// Depois de "Sair", o browser pode restaurar esta página a partir da cache
+// (bfcache) ao premir "retroceder", sem voltar a correr o auth-check inline
+// de cada página. Forçar reload garante que esse check corre sempre e
+// expulsa para login.html se já não houver sessão.
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 async function registarOcorrencia(dados) {
   try {
     const { error } = await window.supabase.from("ocorrencias").insert([dados]);
@@ -345,7 +355,9 @@ async function signOut() {
     localStorage.removeItem("pendentes");
     // Volta ao hub da Comunidade (não à login.html desta app) — ver
     // https://antoniorappleton.github.io/, que lista todas as apps.
-    window.location.href = "https://antoniorappleton.github.io/";
+    // replace() em vez de href: não deixa esta página autenticada no
+    // histórico, para "retroceder" não voltar a mostrá-la.
+    window.location.replace("https://antoniorappleton.github.io/");
   } catch (e) {
     console.error("signOut error", e);
     alert("Erro no logout");
