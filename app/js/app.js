@@ -619,31 +619,42 @@ function getStudentKey(row) {
   );
 }
 
+// "Chegou atrasado" ao primeiro bloco (8h25-9h10) não conta para o
+// destaque de alunos com 3+ ocorrências — é o tempo mais afetado por
+// atrasos pontuais (trânsito, transportes) e não um padrão disciplinar.
+function isExcludedFromFrequentCount(row) {
+  return (
+    row.motivo === "Chegou atrasado" && row.bloco_horario === "08:25-09:10"
+  );
+}
+
 function renderFrequentStudents(rows) {
   const listEl = document.getElementById("frequentStudentsList");
   if (!listEl) return;
 
   const grouped = new Map();
-  (rows || []).forEach((row) => {
-    const nome = String(row.alunos?.nome || row.aluno_nome || "").trim();
-    if (!nome) return;
-    const key = getStudentKey(row);
-    if (!key) return;
-    const current = grouped.get(key) || {
-      nome,
-      ano: row.ano || row.alunos?.ano || "",
-      turma: row.turma || row.alunos?.turma || "",
-      count: 0,
-    };
-    current.count += 1;
-    if (!current.ano && (row.ano || row.alunos?.ano)) {
-      current.ano = row.ano || row.alunos?.ano;
-    }
-    if (!current.turma && (row.turma || row.alunos?.turma)) {
-      current.turma = row.turma || row.alunos?.turma;
-    }
-    grouped.set(key, current);
-  });
+  (rows || [])
+    .filter((row) => !isExcludedFromFrequentCount(row))
+    .forEach((row) => {
+      const nome = String(row.alunos?.nome || row.aluno_nome || "").trim();
+      if (!nome) return;
+      const key = getStudentKey(row);
+      if (!key) return;
+      const current = grouped.get(key) || {
+        nome,
+        ano: row.ano || row.alunos?.ano || "",
+        turma: row.turma || row.alunos?.turma || "",
+        count: 0,
+      };
+      current.count += 1;
+      if (!current.ano && (row.ano || row.alunos?.ano)) {
+        current.ano = row.ano || row.alunos?.ano;
+      }
+      if (!current.turma && (row.turma || row.alunos?.turma)) {
+        current.turma = row.turma || row.alunos?.turma;
+      }
+      grouped.set(key, current);
+    });
 
   const students = [...grouped.values()]
     .filter((student) => student.count >= 3)
@@ -795,6 +806,7 @@ async function carregarOcorrencias(q = "") {
               </div>
               <div class="ocorrencia-meta">
                 <span>📅 ${formattedDate}</span>
+                ${r.bloco_horario ? `<span>• 🕒 ${r.bloco_horario}</span>` : ""}
                 ${anoTurmaText ? `<span>• 🏫 ${anoTurmaText}</span>` : ""}
                 ${r.diretor_turma ? `<span>• 👤 DT: ${r.diretor_turma}</span>` : ""}
               </div>
@@ -836,6 +848,7 @@ async function carregarOcorrencias(q = "") {
               </div>
               <div class="ocorrencia-meta">
                 <span>📅 ${formattedDate}</span>
+                ${r.bloco_horario ? `<span>• 🕒 ${r.bloco_horario}</span>` : ""}
                 ${anoTurmaText ? `<span>• 🏫 ${anoTurmaText}</span>` : ""}
                 ${r.diretor_turma ? `<span>• 👤 DT: ${r.diretor_turma}</span>` : ""}
               </div>
@@ -947,6 +960,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const turmaEl = document.getElementById("turma");
       const motivoEl = document.getElementById("motivo");
       const dataEl = document.getElementById("data");
+      const blocoHorarioEl = document.getElementById("blocoHorario");
       const submitBtn = form.querySelector("button[type=submit]");
       const selectedAluno =
         alunoSelectEl?.options[alunoSelectEl.selectedIndex] || null;
@@ -971,6 +985,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         turma: turmaFinal,
         diretor_turma: selectedTurma?.diretor_turma || null,
         data: dataEl ? dataEl.value : new Date().toISOString().slice(0, 10),
+        bloco_horario: blocoHorarioEl ? blocoHorarioEl.value : "",
         motivo: motivoEl ? motivoEl.value.trim() : "",
         created_at: new Date().toISOString(),
       };
