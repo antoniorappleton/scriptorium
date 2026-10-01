@@ -486,11 +486,31 @@ function renderChart(rows) {
 }
 
 let dashboardRows = [];
+let lastDisplayRows = [];
 
 function deleteOccurrenceIconSvg() {
   return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"></path>
   </svg>`;
+}
+
+function editOccurrenceIconSvg() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M4 20h4.2L18.8 9.4l-4.2-4.2L4 15.8V20Zm2-3.2 8.6-8.6 1.2 1.2L7.2 18H6v-1.2ZM18.4 3.6l2 2a1 1 0 0 1 0 1.4l-1.9 1.9-4.2-4.2 1.9-1.9a1 1 0 0 1 1.4 0Z"></path>
+  </svg>`;
+}
+
+// Looks up the full row (synced or still-pending) behind an edit/delete
+// click — the rendered HTML only carries id/localIndex in data attributes,
+// not every field, so the handler needs the source row to prefill the form.
+function findDisplayRow({ id, localIndex }) {
+  if (localIndex !== null && localIndex !== undefined && localIndex !== "") {
+    return lastDisplayRows.find(
+      (r) => r._local && String(r._pendingIndex) === String(localIndex),
+    );
+  }
+  if (id) return lastDisplayRows.find((r) => !r._local && r.id === id);
+  return null;
 }
 
 function formatMonthLabel(yearMonth) {
@@ -628,13 +648,21 @@ function isExcludedFromFrequentCount(row) {
   );
 }
 
+function getFrequentStudentsMotivoFilter() {
+  return (
+    document.getElementById("frequentStudentsMotivoFilter")?.value || ""
+  );
+}
+
 function renderFrequentStudents(rows) {
   const listEl = document.getElementById("frequentStudentsList");
   if (!listEl) return;
 
+  const motivoFilter = getFrequentStudentsMotivoFilter();
   const grouped = new Map();
   (rows || [])
     .filter((row) => !isExcludedFromFrequentCount(row))
+    .filter((row) => !motivoFilter || row.motivo === motivoFilter)
     .forEach((row) => {
       const nome = String(row.alunos?.nome || row.aluno_nome || "").trim();
       if (!nome) return;
@@ -761,6 +789,7 @@ async function carregarOcorrencias(q = "") {
     dashboardRows = rows;
     updateDashboardFilters(rows);
     const displayRows = applyDashboardFilters(rows);
+    lastDisplayRows = displayRows;
 
     if (!displayRows.length) {
       listEl.innerHTML = `
@@ -783,7 +812,7 @@ async function carregarOcorrencias(q = "") {
           const badgeText = r._local ? "Pendente" : "Sincronizado";
           const anoTurmaText = `${r.ano ? r.ano + "º" : ""}${r.turma ? " " + r.turma : ""}`;
 
-          const deleteAttrs = r._local
+          const itemAttrs = r._local
             ? `data-local-index="${r._pendingIndex}"`
             : `data-id="${r.id || ""}"`;
 
@@ -795,10 +824,19 @@ async function carregarOcorrencias(q = "") {
                   <span class="${badgeClass}">${badgeText}</span>
                   <button
                     type="button"
+                    class="icon-btn edit-ocorrencia-btn"
+                    title="Editar ocorrência"
+                    aria-label="Editar ocorrência"
+                    ${itemAttrs}
+                  >
+                    ${editOccurrenceIconSvg()}
+                  </button>
+                  <button
+                    type="button"
                     class="icon-btn danger delete-ocorrencia-btn"
                     title="Eliminar ocorrência"
                     aria-label="Eliminar ocorrência"
-                    ${deleteAttrs}
+                    ${itemAttrs}
                   >
                     ${deleteOccurrenceIconSvg()}
                   </button>
@@ -837,6 +875,15 @@ async function carregarOcorrencias(q = "") {
                   <span class="badge badge-pending">Pendente</span>
                   <button
                     type="button"
+                    class="icon-btn edit-ocorrencia-btn"
+                    title="Editar ocorrência"
+                    aria-label="Editar ocorrência"
+                    data-local-index="${index}"
+                  >
+                    ${editOccurrenceIconSvg()}
+                  </button>
+                  <button
+                    type="button"
                     class="icon-btn danger delete-ocorrencia-btn"
                     title="Eliminar ocorrência"
                     aria-label="Eliminar ocorrência"
@@ -858,7 +905,12 @@ async function carregarOcorrencias(q = "") {
         })
         .join("");
 
-      const localRows = pendentes.map((p) => ({ ...p, _local: true }));
+      const localRows = pendentes.map((p, index) => ({
+        ...p,
+        _local: true,
+        _pendingIndex: index,
+      }));
+      lastDisplayRows = localRows;
       updateMetrics(localRows);
       renderFrequentStudents(localRows);
       renderChart(localRows);
@@ -914,6 +966,40 @@ async function eliminarOcorrencia({ id, localIndex, searchQuery = "" }) {
     return;
   }
   await carregarOcorrencias(searchQuery);
+}
+
+// Updates data/bloco_horario/motivo on an existing occurrence — synced rows
+// go through Supabase, still-pending ones are patched in localStorage so a
+// retry later syncs the edited version instead of the original.
+async function editarOcorrencia({ id, localIndex, changes, searchQuery = "" }) {
+  if (localIndex !== null && localIndex !== undefined && localIndex !== "") {
+    const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
+    const index = Number(localIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= pendentes.length) {
+      alert("Não foi possível encontrar a ocorrência pendente.");
+      return false;
+    }
+    pendentes[index] = { ...pendentes[index], ...changes };
+    localStorage.setItem("pendentes", JSON.stringify(pendentes));
+    await carregarOcorrencias(searchQuery);
+    return true;
+  }
+
+  if (!id) {
+    alert("Não foi possível identificar a ocorrência.");
+    return false;
+  }
+
+  const { error } = await window.supabase
+    .from("ocorrencias")
+    .update(changes)
+    .eq("id", id);
+  if (error) {
+    alert("Erro ao atualizar ocorrência: " + error.message);
+    return false;
+  }
+  await carregarOcorrencias(searchQuery);
+  return true;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1051,6 +1137,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  const frequentMotivoFilterEl = document.getElementById(
+    "frequentStudentsMotivoFilter",
+  );
+  if (frequentMotivoFilterEl) {
+    frequentMotivoFilterEl.addEventListener("change", () => {
+      renderFrequentStudents(lastDisplayRows);
+    });
+  }
+
   // Load occurrences and check pending syncs
   if (ocorrenciasListEl) {
     carregarOcorrencias();
@@ -1095,6 +1190,90 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (btn.isConnected) btn.disabled = false;
         }
       }, 0);
+    });
+  }
+
+  // Edit popup wired to #editOcorrenciaDialog — present only on the
+  // dashboard (index.html), next to the "Ocorrências Recentes" list.
+  const editDialog = document.getElementById("editOcorrenciaDialog");
+  if (editDialog && ocorrenciasListEl) {
+    const editForm = document.getElementById("editOcorrenciaForm");
+    const editDataEl = document.getElementById("editData");
+    const editBlocoEl = document.getElementById("editBlocoHorario");
+    const editMotivoSelectEl = document.getElementById("editMotivoSelect");
+    const editMotivoEl = document.getElementById("editMotivo");
+    const editCancelBtn = document.getElementById("editOcorrenciaCancel");
+    const MOTIVO_PRESETS = ["Chegou atrasado", "Comportamento desadequado"];
+
+    function updateEditMotivoReadOnly() {
+      const isPreset = MOTIVO_PRESETS.includes(editMotivoSelectEl.value);
+      if (isPreset) editMotivoEl.value = editMotivoSelectEl.value;
+      editMotivoEl.readOnly = isPreset;
+    }
+    editMotivoSelectEl.addEventListener("change", updateEditMotivoReadOnly);
+
+    ocorrenciasListEl.addEventListener("click", (event) => {
+      const btn = event.target.closest(".edit-ocorrencia-btn");
+      if (!btn) return;
+      const row = findDisplayRow({
+        id: btn.dataset.id,
+        localIndex: btn.dataset.localIndex,
+      });
+      if (!row) {
+        alert("Não foi possível carregar esta ocorrência para edição.");
+        return;
+      }
+
+      editForm.dataset.id = row.id || "";
+      editForm.dataset.localIndex =
+        row._local && row._pendingIndex !== undefined
+          ? String(row._pendingIndex)
+          : "";
+
+      editDataEl.value =
+        row.data ||
+        (row.created_at ? row.created_at.slice(0, 10) : "");
+      editBlocoEl.value = row.bloco_horario || "";
+      editMotivoEl.value = row.motivo || "";
+      editMotivoSelectEl.value = MOTIVO_PRESETS.includes(row.motivo)
+        ? row.motivo
+        : "Outro";
+      updateEditMotivoReadOnly();
+
+      editDialog.showModal();
+    });
+
+    if (editCancelBtn) {
+      editCancelBtn.addEventListener("click", () => editDialog.close());
+    }
+
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submitBtn = editForm.querySelector("button[type=submit]");
+      const changes = {
+        data: editDataEl.value,
+        bloco_horario: editBlocoEl.value,
+        motivo: editMotivoEl.value.trim(),
+      };
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "A guardar…";
+      }
+      try {
+        const ok = await editarOcorrencia({
+          id: editForm.dataset.id || null,
+          localIndex: editForm.dataset.localIndex || "",
+          changes,
+          searchQuery: search?.value.trim() || "",
+        });
+        if (ok) editDialog.close();
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Guardar";
+        }
+      }
     });
   }
 
