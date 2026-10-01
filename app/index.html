@@ -112,6 +112,19 @@
 
           <div class="app-card">
             <h3 class="app-card-title">Alunos com 3+ Ocorrências</h3>
+            <div class="form-group" style="margin-bottom: 12px">
+              <label for="frequentStudentsMotivoFilter">Filtrar por motivo</label>
+              <select
+                id="frequentStudentsMotivoFilter"
+                class="form-control"
+              >
+                <option value="">Todos os motivos</option>
+                <option value="Chegou atrasado">Chegou atrasado</option>
+                <option value="Comportamento desadequado">
+                  Comportamento desadequado
+                </option>
+              </select>
+            </div>
             <div id="frequentStudentsList" class="admin-list-container">
               <div class="admin-list-item" style="color: var(--text-muted)">
                 A carregar alunos...
@@ -227,6 +240,66 @@
         </div>
       </div>
     </main>
+
+    <dialog id="editOcorrenciaDialog" class="edit-dialog">
+      <form id="editOcorrenciaForm">
+        <h3 class="app-card-title" style="margin-bottom: 16px">
+          Editar Ocorrência
+        </h3>
+
+        <div class="form-group">
+          <label for="editData">Data do Acontecimento</label>
+          <input type="date" id="editData" required class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label for="editBlocoHorario">Bloco Horário</label>
+          <select id="editBlocoHorario" required class="form-control">
+            <option value="">Selecione o bloco horário</option>
+            <option value="08:25-09:10">08:25 - 09:10</option>
+            <option value="09:15-10:00">09:15 - 10:00</option>
+            <option value="10:20-11:05">10:20 - 11:05</option>
+            <option value="11:10-11:55">11:10 - 11:55</option>
+            <option value="12:05-13:05">12:05 - 13:05</option>
+            <option value="14:10-14:55">14:10 - 14:55</option>
+            <option value="15:00-15:45">15:00 - 15:45</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editMotivoSelect">Motivo</label>
+          <select id="editMotivoSelect" class="form-control">
+            <option value="Chegou atrasado">Chegou atrasado</option>
+            <option value="Comportamento desadequado">
+              Comportamento desadequado
+            </option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editMotivo">Motivo / Descrição Detalhada</label>
+          <textarea
+            id="editMotivo"
+            required
+            class="form-control"
+          ></textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 20px">
+          <button type="submit" class="btn btn-primary" style="flex: 2">
+            Guardar
+          </button>
+          <button
+            type="button"
+            id="editOcorrenciaCancel"
+            class="btn btn-secondary"
+            style="flex: 1"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </dialog>
 
     <script src="js/supabase.js"></script>
     <script src="js/pwa-install.js"></script>
