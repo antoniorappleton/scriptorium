@@ -118,6 +118,9 @@ async function updateUserPasswordByEmail(email, password) {
   return true;
 }
 
+// As funções de relatório PDF (agrupamento por aluno, mapa de calor,
+// gráfico de motivos) vivem em app.js, carregado antes deste ficheiro em
+// admin.html, e são reutilizadas tal e qual aqui em baixo.
 
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.supabaseReady) await window.supabaseReady;
@@ -684,15 +687,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const { data: rows, error } = await query;
         if (error) throw error;
 
-        // prepare table body
-        const body = (rows || []).map((r) => [
-          r.data || (r.created_at ? r.created_at.slice(0, 10) : ""),
-          r.aluno_nome || "",
-          r.ano || "",
-          r.turma || "",
-          r.diretor_turma || "",
-          r.motivo || "",
-        ]);
+        const occurrences = rows || [];
 
         // Load logo image
         async function loadImageDataURL(url) {
@@ -728,13 +723,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         doc.setFontSize(10);
         doc.text(header, 40, 100);
 
-        doc.autoTable({
-          startY: 120,
-          head: [["Data", "Aluno", "Ano", "Turma", "DT", "Motivo"]],
-          body,
-          styles: { fontSize: 9, cellPadding: 4 },
-          headStyles: { fillColor: [30, 60, 120] },
-        });
+        if (!occurrences.length) {
+          doc.setFontSize(11);
+          doc.setTextColor(82, 81, 78);
+          doc.text(
+            "Nenhuma ocorrência encontrada para os filtros selecionados.",
+            40,
+            130,
+          );
+        } else {
+          // Tabela agrupada por aluno: o nome aparece uma única vez (coluna
+          // com rowSpan) seguido das respetivas ocorrências.
+          const groupedBody = buildGroupedReportBody(occurrences);
+          doc.autoTable({
+            startY: 120,
+            margin: { top: 40, bottom: 40 },
+            head: [["Aluno", "Data", "Bloco Horário", "Motivo"]],
+            body: groupedBody,
+            styles: { fontSize: 9, cellPadding: 4, valign: "middle" },
+            headStyles: { fillColor: [30, 60, 120] },
+            columnStyles: { 0: { cellWidth: 150 } },
+          });
+
+          let y = (doc.lastAutoTable?.finalY || 120) + 24;
+          const heatData = computeHeatmapData(occurrences);
+          y = drawHeatmapSection(doc, y, heatData);
+
+          const motivoData = computeMotivoData(occurrences);
+          drawMotivoChartSection(doc, y, motivoData);
+        }
 
         const filename = `relatorio_ocorrencias_${new Date().toISOString().slice(0, 10)}.pdf`;
         doc.save(filename);
