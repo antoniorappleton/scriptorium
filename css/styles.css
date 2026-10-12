@@ -750,6 +750,10 @@ main.app-container {
   color: var(--text-main);
 }
 
+.form-group label.required-label {
+  font-weight: 700;
+}
+
 .form-control {
   width: 100%;
   padding: 12px;
@@ -759,6 +763,11 @@ main.app-container {
   font-family: var(--font);
   background-color: var(--background);
   transition: all var(--transition-fast);
+}
+
+.form-control:required {
+  border-color: hsl(245, 70%, 78%);
+  box-shadow: 0 0 0 2px hsl(245, 100%, 94%);
 }
 
 .form-control:focus {
