@@ -445,6 +445,86 @@ main.app-container {
   font-weight: 500;
 }
 
+/* Mapa de Ocorrências (bloco horário x turma) */
+.heatmap-section + .heatmap-section {
+  margin-top: 20px;
+}
+
+.heatmap-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.heatmap-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+}
+
+.heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.heatmap-table th,
+.heatmap-table td {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.heatmap-table thead th {
+  background: var(--background);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.heatmap-row-label {
+  text-align: left;
+  color: var(--text-main);
+  font-weight: 500;
+  background: var(--background);
+  white-space: nowrap;
+}
+
+.heatmap-cell {
+  font-weight: 600;
+}
+
+.heatmap-total-cell {
+  background: var(--background);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.heatmap-total-row th,
+.heatmap-total-row td {
+  background: var(--surface-border);
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: none;
+}
+
+.heatmap-table tbody tr:last-child td,
+.heatmap-table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+.heatmap-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 24px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+}
+
 /* List Items / Sidebar Ocorrências */
 .sidebar-section {
   display: flex;
@@ -762,6 +842,24 @@ textarea.form-control {
 
 .login-footer strong {
   color: var(--text-main);
+}
+
+.copy-email-btn {
+  width: 24px;
+  height: 24px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.copy-email-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.copy-email-btn.copied {
+  color: var(--success);
+  border-color: var(--success);
+  background: var(--success-light);
 }
 
 /* Alerts and Messages */
