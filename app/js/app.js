@@ -629,6 +629,7 @@ function renderDashboard(rows) {
   updateMetrics(filteredRows);
   renderFrequentStudents(filteredRows);
   renderChart(filteredRows);
+  renderOcorrenciasMaps(rows);
 }
 
 function getStudentKey(row) {
@@ -858,6 +859,7 @@ async function carregarOcorrencias(q = "") {
     updateMetrics(displayRows);
     renderFrequentStudents(displayRows);
     renderChart(displayRows);
+    renderOcorrenciasMaps(rows);
   } catch (err) {
     console.error(err);
     const pendentes = JSON.parse(localStorage.getItem("pendentes") || "[]");
@@ -1190,6 +1192,124 @@ function computeMotivoData(rows, maxItems = 10) {
   return entries;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getRowDateStr(r) {
+  return r.data || (r.created_at ? r.created_at.slice(0, 10) : "");
+}
+
+// Segunda-feira a domingo da semana corrente (semana civil), não os
+// últimos 7 dias — é o agrupamento usado no relatório PDF.
+function getCurrentWeekRange() {
+  const today = new Date();
+  const day = today.getDay(); // 0 = domingo
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10),
+  };
+}
+
+// Renderiza o mapa de calor bloco horário x turma como tabela HTML, com a
+// mesma lógica de agregação/cor do mapa desenhado no relatório PDF
+// (computeHeatmapData + pdfHeatColor).
+function renderHeatmapTable(containerId, rows, emptyMessage) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="heatmap-empty">${escapeHtml(emptyMessage)}</div>`;
+    return;
+  }
+
+  const { blocoLabels, colLabels, matrix, rowTotals, colTotals, maxVal } =
+    computeHeatmapData(rows);
+
+  const theadCols = colLabels
+    .map((label) => `<th>${escapeHtml(label)}</th>`)
+    .join("");
+
+  const bodyRows = blocoLabels
+    .map((label, rIdx) => {
+      const cells = matrix[rIdx]
+        .map((val) => {
+          const t = val / maxVal;
+          const [r, g, b] = pdfHeatColor(t);
+          const [tr, tg, tb] = pdfPickTextColor(r, g, b);
+          return `<td class="heatmap-cell" style="background: rgb(${r}, ${g}, ${b}); color: rgb(${tr}, ${tg}, ${tb})">${val || ""}</td>`;
+        })
+        .join("");
+      return `<tr><th class="heatmap-row-label">${escapeHtml(label)}</th>${cells}<td class="heatmap-total-cell">${rowTotals[rIdx]}</td></tr>`;
+    })
+    .join("");
+
+  const totalRow = `<tr class="heatmap-total-row"><th>Total</th>${colTotals
+    .map((v) => `<td>${v}</td>`)
+    .join("")}<td>${rows.length}</td></tr>`;
+
+  el.innerHTML = `
+    <div class="heatmap-scroll">
+      <table class="heatmap-table">
+        <thead><tr><th>Bloco horário</th>${theadCols}<th>Total</th></tr></thead>
+        <tbody>${bodyRows}${totalRow}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+// Aplica apenas os filtros de ano/turma do Dashboard (não o período), já
+// que o mapa diário/semanal tem a sua própria janela de datas fixa.
+function applyAnoTurmaFilter(rows) {
+  const { ano, turma } = getDashboardFilters();
+  return (rows || []).filter((r) => {
+    if (ano && String(r.ano) !== ano) return false;
+    if (turma && String(r.turma || r.alunos?.turma || "") !== turma)
+      return false;
+    return true;
+  });
+}
+
+function renderOcorrenciasMaps(rows) {
+  if (
+    !document.getElementById("heatmapDaily") &&
+    !document.getElementById("heatmapWeekly")
+  ) {
+    return;
+  }
+
+  const filtered = applyAnoTurmaFilter(rows);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const { start, end } = getCurrentWeekRange();
+
+  const dailyRows = filtered.filter((r) => getRowDateStr(r) === todayStr);
+  const weeklyRows = filtered.filter((r) => {
+    const date = getRowDateStr(r);
+    return date >= start && date <= end;
+  });
+
+  renderHeatmapTable(
+    "heatmapDaily",
+    dailyRows,
+    "Sem ocorrências registadas hoje.",
+  );
+  renderHeatmapTable(
+    "heatmapWeekly",
+    weeklyRows,
+    "Sem ocorrências registadas esta semana.",
+  );
+}
+
 function drawHeatLegend(doc, x, y, width) {
   const steps = 40;
   const stepWidth = width / steps;
@@ -1407,11 +1527,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         motivoTextarea.value = v;
         motivoTextarea.readOnly = true;
       }
+      updateSubmitState();
     }
     if (motivoSelect) {
       motivoSelect.addEventListener("change", updateMotivoFromSelect);
       updateMotivoFromSelect();
     }
+
+    // Only allow "Gravar Ocorrência" once aluno, data, bloco horário e
+    // motivo estão todos preenchidos.
+    const submitBtn = form.querySelector("button[type=submit]");
+    const requiredIds = ["alunoSelect", "data", "blocoHorario", "motivo"];
+    function updateSubmitState() {
+      if (!submitBtn) return;
+      const filled = requiredIds.every((id) => {
+        const el = document.getElementById(id);
+        return el && el.value.trim() !== "";
+      });
+      submitBtn.disabled = !filled;
+    }
+    requiredIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("input", updateSubmitState);
+        el.addEventListener("change", updateSubmitState);
+      }
+    });
+    updateSubmitState();
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const alunoSelectEl = document.getElementById("alunoSelect");

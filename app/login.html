@@ -87,7 +87,19 @@
         </form>
 
         <div class="login-footer">
-          Conta de teste: <strong>scriptorium@colegio-ramalhao.com</strong>
+          Conta de teste:
+          <strong id="testAccountEmail">scriptorium@colegio-ramalhao.com</strong>
+          <button
+            type="button"
+            id="copyTestAccountBtn"
+            class="icon-btn copy-email-btn"
+            title="Copiar email"
+            aria-label="Copiar email da conta de teste"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z" />
+            </svg>
+          </button>
         </div>
       </div>
     </main>
@@ -260,6 +272,38 @@
               togglePasswordBtn.innerHTML = EYE_SVG;
               togglePasswordBtn.setAttribute("aria-label", "Mostrar palavra-passe");
             }
+          });
+        }
+
+        // Copy test account email to clipboard
+        const copyTestAccountBtn = document.getElementById("copyTestAccountBtn");
+        if (copyTestAccountBtn) {
+          const COPY_SVG = copyTestAccountBtn.innerHTML;
+          const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z"/></svg>';
+          copyTestAccountBtn.addEventListener("click", async () => {
+            const email = document.getElementById("testAccountEmail")?.textContent.trim();
+            if (!email) return;
+            try {
+              await navigator.clipboard.writeText(email);
+            } catch (e) {
+              console.warn("Clipboard API failed, using fallback", e);
+              const temp = document.createElement("textarea");
+              temp.value = email;
+              temp.style.position = "fixed";
+              temp.style.opacity = "0";
+              document.body.appendChild(temp);
+              temp.select();
+              document.execCommand("copy");
+              document.body.removeChild(temp);
+            }
+            copyTestAccountBtn.innerHTML = CHECK_SVG;
+            copyTestAccountBtn.classList.add("copied");
+            copyTestAccountBtn.setAttribute("title", "Email copiado!");
+            setTimeout(() => {
+              copyTestAccountBtn.innerHTML = COPY_SVG;
+              copyTestAccountBtn.classList.remove("copied");
+              copyTestAccountBtn.setAttribute("title", "Copiar email");
+            }, 1500);
           });
         }
       })();
