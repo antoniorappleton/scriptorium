@@ -1513,6 +1513,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dataInput = document.getElementById("data");
     if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
     await initRegistarFilters();
+
+    // Only allow "Gravar Ocorrência" once aluno, data, bloco horário e
+    // motivo estão todos preenchidos. Declared before the Motivo presets
+    // below, since selecting a preset calls updateSubmitState() right away.
+    const submitBtn = form.querySelector("button[type=submit]");
+    const requiredIds = ["alunoSelect", "data", "blocoHorario", "motivo"];
+    function updateSubmitState() {
+      if (!submitBtn) return;
+      const filled = requiredIds.every((id) => {
+        const el = document.getElementById(id);
+        return el && el.value.trim() !== "";
+      });
+      submitBtn.disabled = !filled;
+    }
+    requiredIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("input", updateSubmitState);
+        el.addEventListener("change", updateSubmitState);
+      }
+    });
+
     // Motivo presets
     const motivoSelect = document.getElementById("motivoSelect");
     const motivoTextarea = document.getElementById("motivo");
@@ -1534,25 +1556,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateMotivoFromSelect();
     }
 
-    // Only allow "Gravar Ocorrência" once aluno, data, bloco horário e
-    // motivo estão todos preenchidos.
-    const submitBtn = form.querySelector("button[type=submit]");
-    const requiredIds = ["alunoSelect", "data", "blocoHorario", "motivo"];
-    function updateSubmitState() {
-      if (!submitBtn) return;
-      const filled = requiredIds.every((id) => {
-        const el = document.getElementById(id);
-        return el && el.value.trim() !== "";
-      });
-      submitBtn.disabled = !filled;
-    }
-    requiredIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener("input", updateSubmitState);
-        el.addEventListener("change", updateSubmitState);
-      }
-    });
     updateSubmitState();
 
     form.addEventListener("submit", async (e) => {
