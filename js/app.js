@@ -1002,6 +1002,379 @@ async function editarOcorrencia({ id, localIndex, changes, searchQuery = "" }) {
   return true;
 }
 
+// --- Relatório PDF: agrupamento, heatmap e gráfico de motivos ---
+// Partilhado pelo relatório do Dashboard (abaixo) e pelo painel Admin
+// (admin.js, carregado depois de app.js e reutilizando estas funções).
+
+const PDF_PAGE_MARGIN = 40;
+
+const PDF_BLOCOS_HORARIO = [
+  "08:25-09:10",
+  "09:15-10:00",
+  "10:20-11:05",
+  "11:10-11:55",
+  "12:05-13:05",
+  "14:10-14:55",
+  "15:00-15:45",
+];
+
+// Rampa "semântica de calor" (verde = menor ocorrência, vermelho = maior
+// ocorrência) do status palette do design system: good/warning/serious/critical.
+const PDF_HEAT_STOPS = [
+  { t: 0, rgb: [12, 163, 12] },
+  { t: 1 / 3, rgb: [250, 178, 25] },
+  { t: 2 / 3, rgb: [236, 131, 90] },
+  { t: 1, rgb: [208, 59, 59] },
+];
+
+function pdfHeatColor(t) {
+  const clamped = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+  for (let i = 0; i < PDF_HEAT_STOPS.length - 1; i++) {
+    const a = PDF_HEAT_STOPS[i];
+    const b = PDF_HEAT_STOPS[i + 1];
+    if (clamped >= a.t && clamped <= b.t) {
+      const localT = (clamped - a.t) / (b.t - a.t || 1);
+      return [0, 1, 2].map((k) =>
+        Math.round(a.rgb[k] + (b.rgb[k] - a.rgb[k]) * localT),
+      );
+    }
+  }
+  return PDF_HEAT_STOPS[PDF_HEAT_STOPS.length - 1].rgb;
+}
+
+// Nunca confiar só na cor: o texto usa branco/tinta escura segundo a
+// luminosidade do preenchimento, para o número ficar sempre legível.
+function pdfPickTextColor(r, g, b) {
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness >= 150 ? [11, 11, 11] : [255, 255, 255];
+}
+
+// Só avança de página quando o próximo bloco de conteúdo realmente não
+// couber — nunca criar páginas em branco no fim do relatório.
+function pdfEnsureSpace(doc, y, neededHeight) {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (y + neededHeight > pageHeight - PDF_PAGE_MARGIN) {
+    doc.addPage();
+    return PDF_PAGE_MARGIN;
+  }
+  return y;
+}
+
+// Agrupa as ocorrências por aluno (ordenadas por nome, depois por data
+// descendente) para o nome aparecer uma única vez na tabela, com as
+// respetivas ocorrências (data/bloco/motivo) listadas a seguir.
+function buildGroupedReportBody(rows) {
+  const sorted = [...rows].sort((a, b) => {
+    const nameCompare = String(a.aluno_nome || "").localeCompare(
+      String(b.aluno_nome || ""),
+      "pt",
+      { sensitivity: "base" },
+    );
+    if (nameCompare !== 0) return nameCompare;
+    return String(b.data || "").localeCompare(String(a.data || ""));
+  });
+
+  const body = [];
+  let i = 0;
+  while (i < sorted.length) {
+    const alunoNome = sorted[i].aluno_nome || "(sem nome)";
+    let j = i;
+    while (j < sorted.length && (sorted[j].aluno_nome || "(sem nome)") === alunoNome) {
+      j++;
+    }
+    const group = sorted.slice(i, j);
+    const first = group[0];
+    const subtitleParts = [];
+    if (first.ano) subtitleParts.push(`${first.ano}.º ano`);
+    if (first.turma) subtitleParts.push(first.turma);
+    if (first.diretor_turma) subtitleParts.push(`DT: ${first.diretor_turma}`);
+    const subtitle = subtitleParts.join(" · ");
+    const alunoCellText = subtitle ? `${alunoNome}\n${subtitle}` : alunoNome;
+
+    group.forEach((r, idx) => {
+      const dataFmt = r.data || (r.created_at ? r.created_at.slice(0, 10) : "");
+      const rowCells = [dataFmt, r.bloco_horario || "", r.motivo || ""];
+      if (idx === 0) {
+        body.push([
+          {
+            content: alunoCellText,
+            rowSpan: group.length,
+            styles: { valign: "middle" },
+          },
+          ...rowCells,
+        ]);
+      } else {
+        body.push(rowCells);
+      }
+    });
+    i = j;
+  }
+  return body;
+}
+
+// Cruza bloco horário x turma para o mapa de calor. Limita o número de
+// colunas (turmas) para o mapa continuar legível, agregando o resto em
+// "Outras turmas".
+function computeHeatmapData(rows, maxCols = 8) {
+  const colMap = new Map();
+  let hasOutroBloco = false;
+
+  rows.forEach((r) => {
+    const bloco = PDF_BLOCOS_HORARIO.includes(r.bloco_horario)
+      ? r.bloco_horario
+      : "__outro__";
+    if (bloco === "__outro__") hasOutroBloco = true;
+    const turmaLabel = r.turma
+      ? r.ano
+        ? `${r.ano}.º ${r.turma}`
+        : r.turma
+      : "Sem turma";
+    if (!colMap.has(turmaLabel)) {
+      colMap.set(turmaLabel, { label: turmaLabel, total: 0, counts: new Map() });
+    }
+    const col = colMap.get(turmaLabel);
+    col.total += 1;
+    col.counts.set(bloco, (col.counts.get(bloco) || 0) + 1);
+  });
+
+  const blocoKeys = [...PDF_BLOCOS_HORARIO];
+  if (hasOutroBloco) blocoKeys.push("__outro__");
+  const blocoLabels = blocoKeys.map((b) =>
+    b === "__outro__" ? "Outro / sem bloco" : b,
+  );
+
+  let cols = [...colMap.values()].sort((a, b) => b.total - a.total);
+  if (cols.length > maxCols) {
+    const kept = cols.slice(0, maxCols);
+    const rest = cols.slice(maxCols);
+    const outras = { label: "Outras turmas", total: 0, counts: new Map() };
+    rest.forEach((c) => {
+      outras.total += c.total;
+      c.counts.forEach((v, k) => outras.counts.set(k, (outras.counts.get(k) || 0) + v));
+    });
+    cols = kept.concat([outras]);
+  }
+
+  const matrix = blocoKeys.map((bloco) => cols.map((c) => c.counts.get(bloco) || 0));
+  const rowTotals = matrix.map((row) => row.reduce((s, v) => s + v, 0));
+  const colTotals = cols.map((c) => c.total);
+  const maxVal = Math.max(1, ...matrix.flat());
+
+  return {
+    blocoLabels,
+    colLabels: cols.map((c) => c.label),
+    matrix,
+    rowTotals,
+    colTotals,
+    maxVal,
+  };
+}
+
+// Conta ocorrências por motivo (texto exato), do mais para o menos
+// frequente, agregando a "cauda longa" em "Outros motivos".
+function computeMotivoData(rows, maxItems = 10) {
+  const counts = new Map();
+  rows.forEach((r) => {
+    const motivo = String(r.motivo || "").trim() || "Sem motivo";
+    counts.set(motivo, (counts.get(motivo) || 0) + 1);
+  });
+  let entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (entries.length > maxItems) {
+    const kept = entries.slice(0, maxItems);
+    const restTotal = entries
+      .slice(maxItems)
+      .reduce((s, [, c]) => s + c, 0);
+    kept.push(["Outros motivos", restTotal]);
+    entries = kept;
+  }
+  return entries;
+}
+
+function drawHeatLegend(doc, x, y, width) {
+  const steps = 40;
+  const stepWidth = width / steps;
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    const [r, g, b] = pdfHeatColor(t);
+    doc.setFillColor(r, g, b);
+    doc.rect(x + i * stepWidth, y, stepWidth + 0.5, 8, "F");
+  }
+  doc.setFontSize(7);
+  doc.setTextColor(82, 81, 78);
+  doc.text("Menos ocorrências", x, y + 16);
+  doc.text("Mais ocorrências", x + width, y + 16, { align: "right" });
+}
+
+// Desenha o mapa de calor bloco horário x turma e devolve o Y seguinte.
+function drawHeatmapSection(doc, startY, heatData) {
+  const { blocoLabels, colLabels, matrix, rowTotals, colTotals, maxVal } = heatData;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const usableWidth = pageWidth - PDF_PAGE_MARGIN * 2;
+  const rowLabelWidth = 85;
+  const totalColWidth = 38;
+  const numDataCols = Math.max(1, colLabels.length);
+  const colWidth = Math.max(
+    26,
+    (usableWidth - rowLabelWidth - totalColWidth) / numDataCols,
+  );
+  const headerHeight = 28;
+  const rowHeight = 15;
+  const legendHeight = 20;
+  const titleHeight = 16;
+  const totalRowsCount = blocoLabels.length + 1;
+  const neededHeight =
+    titleHeight + legendHeight + headerHeight + totalRowsCount * rowHeight + 14;
+
+  let y = pdfEnsureSpace(doc, startY, neededHeight);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(11, 11, 11);
+  doc.text("Ocorrências por Bloco Horário e Turma", PDF_PAGE_MARGIN, y + 10);
+  doc.setFont("helvetica", "normal");
+  y += titleHeight + 4;
+
+  drawHeatLegend(doc, PDF_PAGE_MARGIN, y, 160);
+  y += legendHeight;
+
+  let x = PDF_PAGE_MARGIN;
+  doc.setFontSize(7);
+
+  doc.setFillColor(245, 245, 243);
+  doc.rect(x, y, rowLabelWidth, headerHeight, "F");
+  doc.setTextColor(82, 81, 78);
+  doc.text("Bloco horário", x + 4, y + headerHeight / 2 + 2);
+  x += rowLabelWidth;
+
+  colLabels.forEach((label) => {
+    doc.setFillColor(245, 245, 243);
+    doc.rect(x, y, colWidth, headerHeight, "F");
+    const lines = doc.splitTextToSize(label, colWidth - 4).slice(0, 2);
+    doc.text(lines, x + colWidth / 2, y + 10, { align: "center" });
+    x += colWidth;
+  });
+
+  doc.setFillColor(238, 237, 230);
+  doc.rect(x, y, totalColWidth, headerHeight, "F");
+  doc.setTextColor(82, 81, 78);
+  doc.text("Total", x + totalColWidth / 2, y + headerHeight / 2 + 2, {
+    align: "center",
+  });
+  y += headerHeight;
+
+  blocoLabels.forEach((blocoLabel, rIdx) => {
+    x = PDF_PAGE_MARGIN;
+    doc.setFillColor(252, 252, 251);
+    doc.rect(x, y, rowLabelWidth, rowHeight, "F");
+    doc.setFontSize(7);
+    doc.setTextColor(11, 11, 11);
+    doc.text(blocoLabel, x + 4, y + rowHeight / 2 + 2);
+    x += rowLabelWidth;
+
+    matrix[rIdx].forEach((val) => {
+      const t = val / maxVal;
+      const [r, g, b] = pdfHeatColor(t);
+      doc.setFillColor(r, g, b);
+      doc.rect(x, y, colWidth, rowHeight, "F");
+      const [tr, tg, tb] = pdfPickTextColor(r, g, b);
+      doc.setTextColor(tr, tg, tb);
+      doc.setFontSize(7.5);
+      doc.text(String(val), x + colWidth / 2, y + rowHeight / 2 + 2, {
+        align: "center",
+      });
+      x += colWidth;
+    });
+
+    doc.setFillColor(238, 237, 230);
+    doc.rect(x, y, totalColWidth, rowHeight, "F");
+    doc.setTextColor(11, 11, 11);
+    doc.setFontSize(7.5);
+    doc.text(String(rowTotals[rIdx]), x + totalColWidth / 2, y + rowHeight / 2 + 2, {
+      align: "center",
+    });
+    y += rowHeight;
+  });
+
+  x = PDF_PAGE_MARGIN;
+  doc.setFillColor(230, 229, 222);
+  doc.setFont("helvetica", "bold");
+  doc.rect(x, y, rowLabelWidth, rowHeight, "F");
+  doc.setFontSize(7.5);
+  doc.setTextColor(11, 11, 11);
+  doc.text("Total", x + 4, y + rowHeight / 2 + 2);
+  x += rowLabelWidth;
+
+  colTotals.forEach((val) => {
+    doc.setFillColor(230, 229, 222);
+    doc.rect(x, y, colWidth, rowHeight, "F");
+    doc.text(String(val), x + colWidth / 2, y + rowHeight / 2 + 2, {
+      align: "center",
+    });
+    x += colWidth;
+  });
+
+  const grandTotal = colTotals.reduce((s, v) => s + v, 0);
+  doc.setFillColor(222, 221, 212);
+  doc.rect(x, y, totalColWidth, rowHeight, "F");
+  doc.text(String(grandTotal), x + totalColWidth / 2, y + rowHeight / 2 + 2, {
+    align: "center",
+  });
+  doc.setFont("helvetica", "normal");
+  y += rowHeight;
+
+  return y + 14;
+}
+
+// Desenha o gráfico de barras "ocorrências por motivo" e devolve o Y seguinte.
+function drawMotivoChartSection(doc, startY, entries) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const usableWidth = pageWidth - PDF_PAGE_MARGIN * 2;
+  const labelWidth = 170;
+  const valueWidth = 30;
+  const barAreaWidth = usableWidth - labelWidth - valueWidth;
+  const barHeight = 11;
+  const rowGap = 7;
+  const lineHeight = 9;
+  const titleHeight = 18;
+
+  doc.setFontSize(8.5);
+  const rows = entries.map(([label, count]) => {
+    const lines = doc.splitTextToSize(label, labelWidth - 6);
+    const h = Math.max(barHeight, lines.length * lineHeight) + rowGap;
+    return { lines, count, h };
+  });
+  const neededHeight = titleHeight + rows.reduce((s, r) => s + r.h, 0) + 10;
+
+  let y = pdfEnsureSpace(doc, startY, neededHeight);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(11, 11, 11);
+  doc.text("Ocorrências por Motivo", PDF_PAGE_MARGIN, y + 10);
+  doc.setFont("helvetica", "normal");
+  y += titleHeight;
+
+  const maxCount = Math.max(1, ...entries.map(([, c]) => c));
+  const barColor = [42, 120, 214]; // azul sequencial do design system
+
+  rows.forEach(({ lines, count, h }) => {
+    doc.setFontSize(8.5);
+    doc.setTextColor(11, 11, 11);
+    doc.text(lines, PDF_PAGE_MARGIN, y + lineHeight);
+
+    const barWidth = Math.max(2, (count / maxCount) * barAreaWidth);
+    doc.setFillColor(barColor[0], barColor[1], barColor[2]);
+    doc.roundedRect(PDF_PAGE_MARGIN + labelWidth, y, barWidth, barHeight, 2, 2, "F");
+
+    doc.setTextColor(82, 81, 78);
+    doc.text(String(count), PDF_PAGE_MARGIN + labelWidth + barWidth + 4, y + barHeight - 2);
+
+    y += h;
+  });
+
+  return y + 10;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (window.supabaseReady) {
     try {
@@ -1333,15 +1706,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      const rows = data || [];
-      const body = (rows || []).map((r) => [
-        r.data || (r.created_at ? r.created_at.slice(0, 10) : ""),
-        r.aluno_nome || "",
-        r.ano || "",
-        r.turma || "",
-        r.diretor_turma || "",
-        r.motivo || "",
-      ]);
+      const occurrences = data || [];
 
       async function loadImageDataURL(url) {
         try {
@@ -1375,21 +1740,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       const header = `Ciclo: ${cicloText}  Ano: ${ano || "Todos"}  Turma: ${turma || "Todas"}`;
       doc.setFontSize(10);
       doc.text(header, 40, 100);
+      let tableStartY = 120;
       if (start || end) {
         doc.text(
           `Período: ${start || "início"} a ${end || "fim"}`,
           40,
           114,
         );
+        tableStartY = 134;
       }
 
-      doc.autoTable({
-        startY: start || end ? 134 : 120,
-        head: [["Data", "Aluno", "Ano", "Turma", "DT", "Motivo"]],
-        body,
-        styles: { fontSize: 9, cellPadding: 4 },
-        headStyles: { fillColor: [30, 60, 120] },
-      });
+      if (!occurrences.length) {
+        doc.setFontSize(11);
+        doc.setTextColor(82, 81, 78);
+        doc.text(
+          "Nenhuma ocorrência encontrada para os filtros selecionados.",
+          40,
+          tableStartY + 10,
+        );
+      } else {
+        // Tabela agrupada por aluno: o nome aparece uma única vez (coluna
+        // com rowSpan) seguido das respetivas ocorrências.
+        const groupedBody = buildGroupedReportBody(occurrences);
+        doc.autoTable({
+          startY: tableStartY,
+          margin: { top: 40, bottom: 40 },
+          head: [["Aluno", "Data", "Bloco Horário", "Motivo"]],
+          body: groupedBody,
+          styles: { fontSize: 9, cellPadding: 4, valign: "middle" },
+          headStyles: { fillColor: [30, 60, 120] },
+          columnStyles: { 0: { cellWidth: 150 } },
+        });
+
+        let y = (doc.lastAutoTable?.finalY || tableStartY) + 24;
+        const heatData = computeHeatmapData(occurrences);
+        y = drawHeatmapSection(doc, y, heatData);
+
+        const motivoData = computeMotivoData(occurrences);
+        drawMotivoChartSection(doc, y, motivoData);
+      }
 
       const filename = `relatorio_ocorrencias_${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(filename);
