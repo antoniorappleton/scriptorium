@@ -8,6 +8,54 @@ window.addEventListener("pageshow", (event) => {
   }
 });
 
+// Adds an "X" button to every plain text/email/search input and textarea so
+// users can clear what they typed with one click. Skips fields that already
+// own a right-side action slot (e.g. the login password-visibility toggle)
+// or that opt out via data-no-clear.
+function initClearableInputs() {
+  const selector = [
+    'input[type="text"]',
+    'input[type="search"]',
+    'input[type="email"]',
+    "textarea",
+  ].join(",");
+  document.querySelectorAll(selector).forEach((field) => {
+    if (field.dataset.noClear !== undefined) return;
+    if (field.closest(".input-with-icon")) return;
+    if (field.parentElement?.classList.contains("clearable-field")) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "clearable-field";
+    if (field.tagName === "TEXTAREA") {
+      wrapper.classList.add("clearable-field--textarea");
+    }
+    field.parentNode.insertBefore(wrapper, field);
+    wrapper.appendChild(field);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "clear-input-btn";
+    btn.setAttribute("aria-label", "Limpar campo");
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5z"/></svg>';
+    wrapper.appendChild(btn);
+
+    const syncVisibility = () => {
+      btn.classList.toggle("visible", field.value.length > 0);
+    };
+    syncVisibility();
+    field.addEventListener("input", syncVisibility);
+
+    btn.addEventListener("click", () => {
+      field.value = "";
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.focus();
+      syncVisibility();
+    });
+  });
+}
+document.addEventListener("DOMContentLoaded", initClearableInputs);
+
 async function registarOcorrencia(dados) {
   try {
     const { error } = await window.supabase.from("ocorrencias").insert([dados]);
@@ -143,62 +191,56 @@ async function initRegistarFilters() {
   await Promise.all([loadRegistarCiclos(), loadRegistarTurmas()]);
   updateRegistarAnoOptions();
   updateRegistarTurmaOptions();
-  await loadAlunosForRegistar();
+  await refreshAlunoOptions();
 
   const cicloEl = document.getElementById("ciclo");
   const anoEl = document.getElementById("ano");
   const turmaEl = document.getElementById("turma");
   const alunoSearchEl = document.getElementById("alunoSearch");
 
-  // Using the ciclo/ano/turma cascade takes over the aluno list, so drop any
-  // active free-text search to avoid the two mechanisms fighting each other.
-  function clearAlunoSearch() {
-    if (alunoSearchEl) alunoSearchEl.value = "";
-  }
-
+  // The free-text search and the ciclo/ano/turma cascade narrow the same
+  // aluno list together — picking a filter never erases what was typed, and
+  // vice versa; refreshAlunoOptions() always reads both.
   if (cicloEl) {
     cicloEl.addEventListener("change", () => {
-      clearAlunoSearch();
       updateRegistarAnoOptions();
       updateRegistarTurmaOptions();
-      loadAlunosForRegistar();
+      refreshAlunoOptions();
     });
   }
   if (anoEl) {
     anoEl.addEventListener("change", () => {
-      clearAlunoSearch();
       updateRegistarTurmaOptions();
-      loadAlunosForRegistar();
+      refreshAlunoOptions();
     });
   }
   if (turmaEl) {
     turmaEl.addEventListener("change", () => {
-      clearAlunoSearch();
-      loadAlunosForRegistar();
+      refreshAlunoOptions();
     });
   }
 
   if (alunoSearchEl) {
-    const debouncedSearch = debounce(async (q) => {
-      if (!q) {
-        await loadAlunosForRegistar();
-        return;
-      }
-      const select = document.getElementById("alunoSelect");
-      if (select) {
-        select.innerHTML = '<option value="">A pesquisar...</option>';
-        select.disabled = true;
-      }
-      const items = await fetchAlunoSuggestions(q, null, null);
-      renderAlunoSelectOptions(items);
-    }, 300);
-    alunoSearchEl.addEventListener("input", (e) => {
-      debouncedSearch(e.target.value.trim());
+    const debouncedRefresh = debounce(refreshAlunoOptions, 300);
+    alunoSearchEl.addEventListener("input", () => {
+      debouncedRefresh();
     });
   }
+
+  initFilterSectionToggle();
 }
 
-// Autocomplete: fetch aluno suggestions filtered by nome, ano, turma
+// Collapses/expands the "Ou encontre o aluno filtrando por turma" section.
+function initFilterSectionToggle() {
+  const btn = document.getElementById("turmaFilterToggle");
+  const section = document.getElementById("turmaFilterSection");
+  if (!btn || !section) return;
+  btn.addEventListener("click", () => {
+    const collapsed = section.classList.toggle("collapsed");
+    btn.setAttribute("aria-expanded", String(!collapsed));
+  });
+}
+
 function debounce(fn, wait) {
   let t;
   return (...args) => {
@@ -207,18 +249,23 @@ function debounce(fn, wait) {
   };
 }
 
-async function fetchAlunoSuggestions(q, ano, turma) {
-  if (!q) return [];
-  let query = window.supabase
-    .from("alunos")
-    .select("id,nome,ano,turma")
-    .ilike("nome", `%${q}%`)
-    .limit(30);
-  if (ano) query = query.eq("ano", Number(ano));
-  if (turma) query = query.eq("turma", turma);
-  const { data, error } = await query;
-  if (error) return [];
-  return data || [];
+// Escapes ILIKE wildcard characters in free-text input so a literal "%" or
+// "_" typed by a user isn't treated as a pattern wildcard.
+function escapeIlike(value) {
+  return value.replace(/[%_]/g, (m) => `\\${m}`);
+}
+
+// Builds the ILIKE pattern for the aluno name search. A single word matches
+// anywhere in the name; two or more words (e.g. "José Olive") match names
+// that start with the first word and then contain each following word, in
+// order, further on — the last word only needs to be a prefix of whatever
+// comes next (e.g. "Olive" still matches "...Oliveira"), so results appear
+// while the surname is still being typed.
+function buildAlunoSearchPattern(q) {
+  const tokens = q.trim().split(/\s+/).filter(Boolean).map(escapeIlike);
+  if (!tokens.length) return "%%";
+  if (tokens.length === 1) return `%${tokens[0]}%`;
+  return `${tokens.join("%")}%`;
 }
 
 function populateAlunosDatalist(items) {
@@ -251,17 +298,19 @@ function renderAlunoSelectOptions(items) {
       .join("");
 }
 
-// Load alunos for the registar select, progressively filtered by whichever
-// of ciclo/ano/turma are already selected — the list narrows as each filter
-// is picked, instead of waiting for all three.
-async function loadAlunosForRegistar() {
+// Loads alunos for the registar select, combining the free-text name search
+// with whichever of ciclo/ano/turma are already selected — the list narrows
+// as each filter is picked, and typing a name never resets the filters
+// (or vice versa).
+async function refreshAlunoOptions() {
   const select = document.getElementById("alunoSelect");
   if (!select) return;
+  const q = document.getElementById("alunoSearch")?.value.trim() || "";
   const cicloId = document.getElementById("ciclo")?.value || null;
   const ano = document.getElementById("ano")?.value || null;
   const turma = document.getElementById("turma")?.value || null;
 
-  if (!cicloId && !ano && !turma) {
+  if (!q && !cicloId && !ano && !turma) {
     select.innerHTML =
       '<option value="">Pesquise o nome acima ou selecione ciclo, ano ou turma</option>';
     select.disabled = true;
@@ -275,7 +324,9 @@ async function loadAlunosForRegistar() {
     let query = window.supabase
       .from("alunos")
       .select("id,nome,ano,turma")
-      .order("nome");
+      .order("nome")
+      .limit(50);
+    if (q) query = query.ilike("nome", buildAlunoSearchPattern(q));
     if (cicloId) query = query.eq("ciclo_id", cicloId);
     if (ano) query = query.eq("ano", Number(ano));
     if (turma) query = query.eq("turma", turma);
@@ -283,7 +334,7 @@ async function loadAlunosForRegistar() {
     if (error) throw error;
     renderAlunoSelectOptions(data || []);
   } catch (e) {
-    console.error("loadAlunosForRegistar error", e);
+    console.error("refreshAlunoOptions error", e);
     select.innerHTML = '<option value="">Erro ao carregar alunos</option>';
   }
 }
