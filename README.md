@@ -68,6 +68,73 @@ A aplicação foi desenvolvida com um design system moderno em **Vanilla CSS** q
 
 ---
 
+## Relatórios Automáticos (Email semanal/mensal aos Diretores de Turma)
+
+Além do PDF gerado manualmente no painel admin, o Scriptorium pode enviar
+automaticamente, por email, um relatório de ocorrências a cada Diretor de
+Turma (DT): semanalmente (toda segunda-feira, cobrindo a semana anterior) e
+mensalmente (dia 1 de cada mês, cobrindo o mês anterior).
+
+O envio é feito por uma Edge Function do Supabase
+(`supabase/functions/send-relatorios-dt`), agendada via `pg_cron`/`pg_net`,
+usando a API HTTPS do **SendGrid** (sem SMTP e sem necessidade de DNS
+próprio — ver nota abaixo).
+
+### Configuração (uma vez)
+
+1. **SendGrid:**
+   - Criar conta gratuita em [sendgrid.com](https://sendgrid.com) (até 100
+     emails/dia, suficiente para este caso de uso).
+   - Em *Settings → Sender Authentication → Single Sender Verification*,
+     verificar `antonio.appleton@colegio-ramalhao.com` (basta clicar no
+     link que o SendGrid envia para essa caixa — sem alterar DNS).
+   - Em *Settings → API Keys*, criar uma API Key com permissão **Mail Send**.
+2. **Ligar cada turma ao professor Diretor de Turma** (para obter um email
+   inequívoco a quem enviar): correr `db/add_dt_professor_link.sql` no SQL
+   Editor do Supabase. No final, o script lista turmas cujo nome de DT não
+   correspondeu automaticamente a nenhum professor — corrigir manualmente
+   com `UPDATE turmas SET dt_professor_id = '<uuid>' WHERE id = '<uuid>';`.
+3. **Tabela de auditoria:** correr `db/relatorios_log.sql`.
+4. **Deploy da function:**
+   ```bash
+   supabase functions deploy send-relatorios-dt --no-verify-jwt
+   ```
+5. **Secrets da function:**
+   ```bash
+   supabase secrets set CRON_SECRET=<uma-string-aleatoria-longa>
+   supabase secrets set SENDGRID_API_KEY=<api-key-do-sendgrid>
+   ```
+6. **Testar antes de agendar** (não envia nada, só mostra o que seria
+   enviado):
+   ```bash
+   curl "https://pllmyptwuvxryxfeufcm.supabase.co/functions/v1/send-relatorios-dt?period=weekly&dryRun=true&start=2026-01-05&end=2026-01-11" \
+     -H "x-cron-secret: <CRON_SECRET>"
+   ```
+   Depois, testar o envio real para um email de controlo (sem incomodar os
+   DTs), usando `testRecipient`:
+   ```bash
+   curl "https://pllmyptwuvxryxfeufcm.supabase.co/functions/v1/send-relatorios-dt?period=weekly&start=2026-01-05&end=2026-01-11&testRecipient=o-seu-email@exemplo.com" \
+     -H "x-cron-secret: <CRON_SECRET>"
+   ```
+   Confirmar que o email chega com o PDF em anexo e os dados corretos, e
+   que ficou um registo em `relatorios_log`.
+7. **Ativar o envio automático:** correr `db/schedule_relatorios_cron.sql`
+   no SQL Editor (substituindo `<CRON_SECRET>` pelo mesmo valor do passo 5).
+
+### Limitações conhecidas
+
+- `pg_cron` corre sempre em UTC, sem ajuste de horário de verão: os envios
+  às 07:00 UTC chegam às 07:00 em Lisboa no inverno e às 08:00 no verão.
+- Turmas cujo `diretor_turma` (texto) não corresponda ao nome exato de um
+  professor na tabela `professores` não recebem relatório automático até
+  serem ligadas manualmente (ver passo 2).
+- O PDF automático é mais simples que o PDF manual do painel admin: inclui
+  a tabela de ocorrências e um resumo por motivo, mas não o mapa de calor
+  nem o gráfico de barras (que só fazem sentido ao comparar várias turmas).
+- O envio é sempre um email por turma. Um DT responsável por mais do que
+  uma turma recebe um email separado por cada turma, em vez de um único
+  email combinado.
+
 ## Estrutura do Repositório
 
 - `app/` — Código fonte completo da aplicação PWA (HTML, CSS, JS, Assets).
