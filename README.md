@@ -139,7 +139,7 @@ próprio — ver nota abaixo).
 
 - `app/` — Código fonte completo da aplicação PWA (HTML, CSS, JS, Assets).
 - `db/` — Scripts SQL para criação das tabelas e migrações do banco de dados no Supabase.
-- `docs/` — Documentação complementar (desenvolvimento local, etc.).
+- `docs/LOCAL_DEV.md` — Documentação complementar (desenvolvimento local, etc.).
 - `docs_backup/` — Instruções originais de configuração e suporte.
 
 Scriptorium/ (Raiz)
