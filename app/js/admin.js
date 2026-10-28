@@ -17,6 +17,32 @@
       .join("");
 }
 
+async function loadProfessoresForDtSelect() {
+  const el = document.getElementById("manageDtProfessor");
+  if (!el) return;
+  const { data, error } = await window.supabase
+    .from("professores")
+    .select("id, nome, email")
+    .order("nome");
+  if (error) {
+    el.innerHTML = '<option value="">Erro a carregar professores</option>';
+    return;
+  }
+  adminProfessoresCache = data || [];
+  el.innerHTML =
+    '<option value="">-- nenhum --</option>' +
+    adminProfessoresCache
+      .map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.nome)} (${escapeHtml(p.email || "")})</option>`)
+      .join("");
+}
+
+function syncDtSelectForManagedTurma() {
+  const el = document.getElementById("manageDtProfessor");
+  if (!el) return;
+  const turma = getSelectedManagedTurma();
+  el.value = turma?.dt_professor_id || "";
+}
+
 function compareTurmas(a, b) {
   const anoA = Number.isFinite(a.ano) ? a.ano : Infinity;
   const anoB = Number.isFinite(b.ano) ? b.ano : Infinity;
@@ -27,6 +53,7 @@ function compareTurmas(a, b) {
 }
 
 let adminTurmasCache = [];
+let adminProfessoresCache = [];
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -162,6 +189,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Admin access granted, load data
   await loadCiclos();
+  await loadProfessoresForDtSelect();
 
   const anoFilterEl = document.getElementById("turmasAnoFiltro");
   if (anoFilterEl) {
@@ -175,7 +203,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   const manageTurmaEl = document.getElementById("manageTurma");
   if (manageAnoEl) manageAnoEl.addEventListener("change", loadManageTurmas);
   if (manageTurmaEl) {
-    manageTurmaEl.addEventListener("change", loadStudentsForManagedTurma);
+    manageTurmaEl.addEventListener("change", () => {
+      syncDtSelectForManagedTurma();
+      loadStudentsForManagedTurma();
+    });
+  }
+
+  const saveDtBtn = document.getElementById("saveDtBtn");
+  if (saveDtBtn) {
+    saveDtBtn.addEventListener("click", async () => {
+      const statusEl = document.getElementById("saveDtStatus");
+      const turma = getSelectedManagedTurma();
+      if (!turma) {
+        alert("Selecione uma turma.");
+        return;
+      }
+      const professorId = document.getElementById("manageDtProfessor")?.value || null;
+      const professor = professorId
+        ? adminProfessoresCache.find((p) => p.id === professorId)
+        : null;
+
+      const { error } = await window.supabase
+        .from("turmas")
+        .update({
+          dt_professor_id: professorId || null,
+          diretor_turma: professor?.nome || null,
+        })
+        .eq("id", turma.id);
+
+      if (statusEl) {
+        statusEl.style.display = "block";
+        if (error) {
+          statusEl.className = "alert alert-error";
+          statusEl.textContent = "Erro ao guardar DT: " + error.message;
+        } else {
+          statusEl.className = "alert alert-success";
+          statusEl.textContent = professor
+            ? `Diretor de Turma atualizado: ${professor.nome}.`
+            : "Diretor de Turma removido desta turma.";
+          await refreshTurmas();
+          await loadManageTurmas();
+        }
+      }
+    });
   }
 
   const turmasListEl = document.getElementById("turmasList");
@@ -255,6 +325,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         )
         .join("");
     if (filtered.some((t) => t.id === previous)) el.value = previous;
+    syncDtSelectForManagedTurma();
     await loadStudentsForManagedTurma();
   }
 
